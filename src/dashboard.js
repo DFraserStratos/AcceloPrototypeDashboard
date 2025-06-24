@@ -579,13 +579,8 @@ class Dashboard {
         
         contentTitle.textContent = 'Dashboard Name';
         
-        // Show refresh button if we have items
-        contentActions.style.display = 'flex';
-        contentActions.innerHTML = `
-            <button class="btn btn-secondary" onclick="dashboard.refreshDashboardData()" title="Refresh all data">
-                <i class="fa-solid fa-refresh"></i> Refresh
-            </button>
-        `;
+        // Hide content actions area since we only need the nav refresh button
+        contentActions.style.display = 'none';
         
         if (this.dashboardData.length === 0) {
             contentGrid.innerHTML = `
