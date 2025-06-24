@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accelo API Settings</title>
+    <link rel="stylesheet" href="/styles/main.css">
+    <style>
+        .settings-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        
+        .settings-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+        
+        .back-link:hover {
+            color: var(--primary-color);
+        }
+        
+        .connection-status {
+            padding: 16px;
+            border-radius: var(--radius-md);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .connection-status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .connection-status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status-icon.connected {
+            background-color: #28a745;
+        }
+        
+        .status-icon.disconnected {
+            background-color: #dc3545;
+        }
+        
+        .debug-section {
+            margin-top: 40px;
+        }
+        
+        .debug-toggle {
+            cursor: pointer;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .debug-toggle:hover {
+            color: var(--text-primary);
+        }
+        
+        .debug-log {
+            margin-top: 16px;
+            padding: 16px;
+            background-color: #f8f9fa;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .debug-log.show {
+            display: block;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .log-time {
+            color: #6c757d;
+            margin-right: 8px;
+        }
+        
+        .log-level {
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        .log-level.info { color: #17a2b8; }
+        .log-level.success { color: #28a745; }
+        .log-level.error { color: #dc3545; }
+        .log-level.warning { color: #ffc107; }
+        
+        .api-info {
+            background-color: #e8f4fd;
+            border: 1px solid #bee5eb;
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 24px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .api-info h4 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            color: #0c5460;
+        }
+        
+        .api-info ul {
+            margin: 8px 0;
+            padding-left: 24px;
+        }
+        
+        .api-info code {
+            background-color: #f1f1f1;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <div class="settings-header">
+            <h1>API Settings</h1>
+            <a href="/" class="back-link">
+                <span>←</span>
+                Back to Dashboard
+            </a>
+        </div>
+
+        <div id="connectionStatus" class="connection-status disconnected">
+            <span class="status-icon disconnected"></span>
+            <div>
+                <strong>Not Connected</strong>
+                <div class="text-small">Please configure your API credentials below</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Accelo API Configuration</h2>
+            
+            <div class="api-info">
+                <h4>Service Application Authentication</h4>
+                <p>This application uses Service Application authentication (OAuth 2.0 Client Credentials flow).</p>
+                <ul>
+                    <li>Tokens are valid for 30 days</li>
+                    <li>The app executes as the user specified during Service Application registration</li>
+                    <li>Rate limit: 5,000 requests per hour</li>
+                </ul>
+            </div>
+
+            <form id="settingsForm">
+                <div class="form-group">
+                    <label for="deployment">Deployment Name</label>
+                    <input type="text" id="deployment" name="deployment" placeholder="stp" required>
+                    <div class="help-text">
+                        Your Accelo subdomain. For example, if your Accelo URL is https://mycompany.accelo.com, enter "mycompany".
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="clientId">Client ID</label>
+                    <input type="text" id="clientId" name="clientId" placeholder="service_app_xxxxx@yourcompany.accelo.com" required>
+                    <div class="help-text">
+                        The full Client ID from your Service Application registration.
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="clientSecret">Client Secret</label>
+                    <input type="password" id="clientSecret" name="clientSecret" placeholder="w1XXXXXXXXXXXXXXXXXXXXXBR7" required>
+                    <div class="help-text">
+                        The Client Secret from your Service Application registration. This is stored securely and never sent to the browser.
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <span id="btnText">Connect to Accelo</span>
+                        <span id="btnSpinner" class="spinner d-none"></span>
+                    </button>
+                    <button type="button" id="clearBtn" class="btn btn-secondary">Clear Settings</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-toggle" onclick="toggleDebugLog()">
+                <span id="debugToggleIcon">▶</span>
+                Debug Log
+            </div>
+            <div id="debugLog" class="debug-log"></div>
+        </div>
+    </div>
+
+    <script src="/src/settings.js"></script>
+</body>
+</html>

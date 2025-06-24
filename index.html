@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accelo Dashboard</title>
+    <link rel="stylesheet" href="/styles/main.css">
+    <link rel="stylesheet" href="/styles/dashboard.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <h1 class="navbar-title">Accelo Dashboard</h1>
+        <div class="navbar-actions">
+            <button class="btn btn-primary" onclick="dashboard.showAddItemModal()">
+                <span class="icon-add"></span>
+                Add Item
+            </button>
+            <a href="/settings" class="btn btn-icon btn-ghost" title="Settings">
+                <span class="icon-settings"></span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>Companies</h2>
+            </div>
+            <div id="companyList" class="company-list">
+                <!-- Companies will be loaded here -->
+                <div class="empty-state">
+                    <div class="empty-state-icon">🏢</div>
+                    <div class="empty-state-title">No Companies Added</div>
+                    <div class="empty-state-description">
+                        Click "Add Item" to search and add companies to your dashboard.
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <div class="content-header">
+                <h2 id="contentTitle">Select a Company</h2>
+                <p class="text-muted">Choose a company from the sidebar to view its projects and agreements.</p>
+            </div>
+            
+            <div id="contentGrid" class="content-grid">
+                <!-- Progress blocks will be loaded here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Item Modal -->
+    <div id="addItemModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Add Items to Dashboard</h2>
+                <button class="btn btn-icon btn-ghost" onclick="dashboard.hideAddItemModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="add-item-search">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Search for companies, projects, or agreements..."
+                        onkeyup="dashboard.handleSearch(this.value)"
+                    >
+                </div>
+                
+                <div id="searchResults" class="search-results">
+                    <!-- Search results will appear here -->
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <div class="empty-state-title">Start Searching</div>
+                        <div class="empty-state-description">
+                            Type to search for companies, projects, or agreements in your Accelo account.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="dashboard.hideAddItemModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="dashboard.addSelectedItems()">
+                    Add Selected Items
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay d-none">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/src/api-client.js"></script>
+    <script src="/src/components.js"></script>
+    <script src="/src/dashboard.js"></script>
+</body>
+</html>
