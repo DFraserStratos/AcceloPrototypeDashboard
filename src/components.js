@@ -28,6 +28,12 @@ class UIComponents {
                         ${company.itemCount || 0} items
                     </div>
                 </div>
+                <button class="btn btn-icon btn-ghost btn-remove company-remove-btn" 
+                        onclick="event.stopPropagation(); dashboard.confirmRemoveCompany(${company.id})" 
+                        title="Remove company from dashboard"
+                        data-company-id="${company.id}">
+                    <span class="icon-remove">✕</span>
+                </button>
             </div>
             ${company.hasActiveItems ? '<div class="company-card-indicator"></div>' : ''}
         `;
@@ -59,6 +65,12 @@ class UIComponents {
                         Project • ${project.status || 'Active'}
                     </div>
                 </div>
+                <button class="btn btn-icon btn-ghost btn-remove block-remove-btn" 
+                        onclick="event.stopPropagation(); dashboard.confirmRemoveProject(${project.id})" 
+                        title="Remove project from dashboard"
+                        data-project-id="${project.id}">
+                    <span class="icon-remove">✕</span>
+                </button>
             </div>
             
             <div class="progress-block-metrics">
@@ -118,6 +130,12 @@ class UIComponents {
                         Agreement • ${agreement.retainer_type || 'Time-based'}
                     </div>
                 </div>
+                <button class="btn btn-icon btn-ghost btn-remove block-remove-btn" 
+                        onclick="event.stopPropagation(); dashboard.confirmRemoveAgreement(${agreement.id})" 
+                        title="Remove agreement from dashboard"
+                        data-agreement-id="${agreement.id}">
+                    <span class="icon-remove">✕</span>
+                </button>
             </div>
             
             <div class="progress-block-metrics">
@@ -292,6 +310,82 @@ class UIComponents {
         const div = document.createElement('div');
         div.textContent = text || '';
         return div.innerHTML;
+    }
+    
+    /**
+     * Show confirmation dialog
+     */
+    static showConfirmationDialog(title, message, onConfirm, onCancel = null) {
+        // Remove any existing confirmation dialog
+        const existingDialog = document.getElementById('confirmationDialog');
+        if (existingDialog) {
+            existingDialog.remove();
+        }
+
+        // Create dialog HTML
+        const dialog = document.createElement('div');
+        dialog.id = 'confirmationDialog';
+        dialog.className = 'modal-backdrop confirmation-dialog';
+        
+        dialog.innerHTML = `
+            <div class="modal confirmation-modal">
+                <div class="modal-header">
+                    <h3>${this.escapeHtml(title)}</h3>
+                </div>
+                <div class="modal-body">
+                    <p>${this.escapeHtml(message)}</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-ghost cancel-btn">Cancel</button>
+                    <button class="btn btn-danger confirm-btn">Remove</button>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners
+        const cancelBtn = dialog.querySelector('.cancel-btn');
+        const confirmBtn = dialog.querySelector('.confirm-btn');
+        
+        const cleanup = () => {
+            dialog.remove();
+        };
+
+        cancelBtn.addEventListener('click', () => {
+            cleanup();
+            if (onCancel) onCancel();
+        });
+
+        confirmBtn.addEventListener('click', () => {
+            cleanup();
+            onConfirm();
+        });
+
+        // Close on backdrop click
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog) {
+                cleanup();
+                if (onCancel) onCancel();
+            }
+        });
+
+        // Close on escape key
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                cleanup();
+                document.removeEventListener('keydown', escapeHandler);
+                if (onCancel) onCancel();
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        // Add to DOM and show
+        document.body.appendChild(dialog);
+        
+        // Show the modal (add the show class)
+        setTimeout(() => {
+            dialog.classList.add('show');
+            confirmBtn.focus();
+        }, 10);
     }
 }
 

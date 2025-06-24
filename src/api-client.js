@@ -359,6 +359,70 @@ class AcceloAPI {
             };
         }
     }
+
+    /**
+     * Search for companies only
+     */
+    async searchCompanies(query) {
+        try {
+            const response = await this.request(`/companies?_search=${encodeURIComponent(query)}&_limit=20&_fields=id,name,website,phone,standing`);
+            return response?.response || [];
+        } catch (error) {
+            console.error('Company search failed:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Get projects and agreements for selected companies
+     */
+    async getProjectsAndAgreements(companyIds = []) {
+        try {
+            const results = [];
+            
+            for (const companyId of companyIds) {
+                // Get company details
+                const companyResponse = await this.request(`/companies/${companyId}?_fields=id,name`);
+                const company = companyResponse?.response;
+                
+                if (!company) continue;
+                
+                // Get projects and agreements for this company
+                const [projects, agreements] = await Promise.all([
+                    this.getProjects(companyId, { standing: 'active' }),
+                    this.getAgreements(companyId, { standing: 'active' })
+                ]);
+                
+                // Add company info to each project
+                const projectsWithCompany = projects.map(project => ({
+                    ...project,
+                    company_info: company,
+                    type: 'project'
+                }));
+                
+                // Add company info to each agreement
+                const agreementsWithCompany = agreements.map(agreement => ({
+                    ...agreement,
+                    company_info: company,
+                    type: 'agreement'
+                }));
+                
+                results.push({
+                    company,
+                    projects: projectsWithCompany,
+                    agreements: agreementsWithCompany
+                });
+                
+                // Small delay to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            return results;
+        } catch (error) {
+            console.error('Failed to get projects and agreements:', error);
+            return [];
+        }
+    }
 }
 
 // Export as singleton
