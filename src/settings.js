@@ -418,3 +418,87 @@ function log(message, level = 'info') {
         setTimeout(refreshLogs, 100);
     }
 }
+
+// Test API connection
+async function testAPI() {
+    if (!currentSettings || !currentSettings.accessToken) {
+        showAlert('No API connection configured. Please connect first.', 'error');
+        return;
+    }
+    
+    // Check if token is expired
+    const tokenExpiry = new Date(currentSettings.tokenExpiry);
+    const now = new Date();
+    
+    if (tokenExpiry <= now) {
+        showAlert('Token has expired. Please reconnect to test the API.', 'error');
+        return;
+    }
+    
+    log('Starting API test...', 'info');
+    updateLogStatus('Testing API connection...');
+    
+    try {
+        // Test 1: Basic API endpoint (companies)
+        const testUrl = `https://${currentSettings.deployment}.api.accelo.com/api/v0/companies`;
+        
+        log(`Testing API endpoint: ${testUrl}`, 'info');
+        
+        const response = await fetch('/api/proxy', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${currentSettings.accessToken}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Target-URL': testUrl
+            }
+        });
+        
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`API test failed: ${response.status} - ${error}`);
+        }
+        
+        const data = await response.json();
+        
+        // Log successful test
+        log('API test successful!', 'success');
+        log(`Response received: ${data.response?.length || 0} companies found`, 'info');
+        
+        // Test 2: Check user permissions (whoami)
+        const whoamiUrl = `https://${currentSettings.deployment}.api.accelo.com/api/v0/users/whoami`;
+        log(`Testing user permissions: ${whoamiUrl}`, 'info');
+        
+        const whoamiResponse = await fetch('/api/proxy', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${currentSettings.accessToken}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Target-URL': whoamiUrl
+            }
+        });
+        
+        if (whoamiResponse.ok) {
+            const whoamiData = await whoamiResponse.json();
+            const user = whoamiData.response;
+            log(`Authenticated as: ${user.firstname} ${user.surname} (${user.email})`, 'success');
+        } else {
+            log('User permissions check failed (this may be expected for service apps)', 'warning');
+        }
+        
+        showAlert('API test completed successfully! Check the debug log for details.', 'success');
+        updateLogStatus('API test completed successfully');
+        
+        // Auto-refresh logs to show new entries
+        setTimeout(refreshLogs, 500);
+        
+    } catch (error) {
+        log(`API test failed: ${error.message}`, 'error');
+        showAlert(`API test failed: ${error.message}`, 'error');
+        updateLogStatus('API test failed');
+        
+        // Auto-refresh logs to show error entries
+        setTimeout(refreshLogs, 500);
+    }
+}

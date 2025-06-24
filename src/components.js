@@ -165,11 +165,25 @@ class UIComponents {
                 break;
             case 'project':
                 typeLabel = 'Project';
-                metaInfo = `Company: ${item.company_name || 'Unknown'}`;
+                // Use company_info if available, otherwise show type
+                if (item.company_info && item.company_info.name) {
+                    metaInfo = `Company: ${item.company_info.name}`;
+                } else if (item.against) {
+                    metaInfo = `${item.against.type}: ${item.against.id}`;
+                } else {
+                    metaInfo = 'No company info';
+                }
                 break;
             case 'agreement':
                 typeLabel = 'Agreement';
-                metaInfo = `Company: ${item.company_name || 'Unknown'}`;
+                // Use company_info if available, otherwise show type
+                if (item.company_info && item.company_info.name) {
+                    metaInfo = `Company: ${item.company_info.name}`;
+                } else if (item.against) {
+                    metaInfo = `${item.against.type}: ${item.against.id}`;
+                } else {
+                    metaInfo = 'No company info';
+                }
                 break;
         }
         
@@ -243,12 +257,30 @@ class UIComponents {
     }
     
     /**
-     * Format date
+     * Format date - handles both Unix timestamps and ISO strings
      */
-    static formatDate(dateString) {
-        if (!dateString) return '';
+    static formatDate(dateValue) {
+        if (!dateValue) return '';
         
-        const date = new Date(dateString);
+        let date;
+        
+        // Check if it's a Unix timestamp (number or numeric string)
+        if (typeof dateValue === 'number' || /^\d+$/.test(dateValue)) {
+            // Unix timestamp - multiply by 1000 if needed
+            const timestamp = Number(dateValue);
+            // Check if timestamp is in seconds (less than year 10000) or milliseconds
+            date = new Date(timestamp < 10000000000 ? timestamp * 1000 : timestamp);
+        } else {
+            // Assume ISO string or other date format
+            date = new Date(dateValue);
+        }
+        
+        // Check for invalid date
+        if (isNaN(date.getTime())) {
+            console.warn('Invalid date value:', dateValue);
+            return 'Invalid date';
+        }
+        
         const options = { year: 'numeric', month: 'short', day: 'numeric' };
         return date.toLocaleDateString('en-US', options);
     }

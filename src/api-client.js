@@ -167,60 +167,92 @@ class AcceloAPI {
      * Get activity allocations (hours) for a project
      */
     async getProjectHours(projectId) {
-        const params = new URLSearchParams({
-            _fields: 'id,against,billable,nonbillable,logged,charged',
-            _filters: `against_type(job),against_id(${projectId})`
-        });
+        try {
+            const params = new URLSearchParams({
+                _fields: 'id,against,billable,nonbillable,logged,charged',
+                _filters: `against_type(job),against_id(${projectId})`
+            });
 
-        const response = await this.request(`/activities/allocations?${params}`);
-        const allocations = response.response || [];
-        
-        // Sum up the hours
-        const totals = allocations.reduce((acc, allocation) => {
-            acc.billable += (allocation.billable || 0);
-            acc.nonbillable += (allocation.nonbillable || 0);
-            acc.logged += (allocation.logged || 0);
-            acc.charged += (allocation.charged || 0);
-            return acc;
-        }, { billable: 0, nonbillable: 0, logged: 0, charged: 0 });
+            const response = await this.request(`/activities/allocations?${params}`);
+            const allocations = response?.response || [];
+            
+            // Handle empty response
+            if (!Array.isArray(allocations)) {
+                console.warn(`Invalid allocations response for project ${projectId}`);
+                return {
+                    billableHours: 0,
+                    nonBillableHours: 0,
+                    loggedHours: 0,
+                    chargedHours: 0
+                };
+            }
+            
+            // Sum up the hours
+            const totals = allocations.reduce((acc, allocation) => {
+                acc.billable += (allocation?.billable || 0);
+                acc.nonbillable += (allocation?.nonbillable || 0);
+                acc.logged += (allocation?.logged || 0);
+                acc.charged += (allocation?.charged || 0);
+                return acc;
+            }, { billable: 0, nonbillable: 0, logged: 0, charged: 0 });
 
-        // Convert seconds to hours
-        return {
-            billableHours: Math.round(totals.billable / 3600 * 10) / 10,
-            nonBillableHours: Math.round(totals.nonbillable / 3600 * 10) / 10,
-            loggedHours: Math.round(totals.logged / 3600 * 10) / 10,
-            chargedHours: Math.round(totals.charged / 3600 * 10) / 10
-        };
+            // Convert seconds to hours
+            return {
+                billableHours: Math.round(totals.billable / 3600 * 10) / 10,
+                nonBillableHours: Math.round(totals.nonbillable / 3600 * 10) / 10,
+                loggedHours: Math.round(totals.logged / 3600 * 10) / 10,
+                chargedHours: Math.round(totals.charged / 3600 * 10) / 10
+            };
+        } catch (error) {
+            console.error(`Failed to get project hours for ${projectId}:`, error);
+            return {
+                billableHours: 0,
+                nonBillableHours: 0,
+                loggedHours: 0,
+                chargedHours: 0
+            };
+        }
     }
 
     /**
      * Get current period usage for an agreement
      */
     async getAgreementUsage(agreementId) {
-        const params = new URLSearchParams({
-            _fields: 'id,date_commenced,date_expires,contract_budget',
-            _limit: 1,
-            _order_by: 'date_commenced',
-            _order_by_desc: 1
-        });
+        try {
+            const params = new URLSearchParams({
+                _fields: 'id,date_commenced,date_expires,contract_budget',
+                _limit: 1,
+                _order_by: 'date_commenced',
+                _order_by_desc: 1
+            });
 
-        const response = await this.request(`/contracts/${agreementId}/periods?${params}`);
-        const periods = response.response || [];
-        
-        if (periods.length > 0) {
+            const response = await this.request(`/contracts/${agreementId}/periods?${params}`);
+            const periods = response?.response || [];
+            
+            // Handle empty or invalid response
+            if (!Array.isArray(periods) || periods.length === 0) {
+                console.log(`No periods found for agreement ${agreementId}`);
+                return null;
+            }
+            
             const currentPeriod = periods[0];
-            const budget = currentPeriod.contract_budget || {};
+            if (!currentPeriod) {
+                return null;
+            }
+            
+            const budget = currentPeriod?.contract_budget || {};
             
             return {
                 periodStart: currentPeriod.date_commenced,
                 periodEnd: currentPeriod.date_expires,
-                timeAllowance: budget.time ? Math.round(budget.time / 3600 * 10) / 10 : 0,
-                timeUsed: budget.time_used ? Math.round(budget.time_used / 3600 * 10) / 10 : 0,
-                timeRemaining: budget.time_remaining ? Math.round(budget.time_remaining / 3600 * 10) / 10 : 0
+                timeAllowance: budget?.time ? Math.round(budget.time / 3600 * 10) / 10 : 0,
+                timeUsed: budget?.time_used ? Math.round(budget.time_used / 3600 * 10) / 10 : 0,
+                timeRemaining: budget?.time_remaining ? Math.round(budget.time_remaining / 3600 * 10) / 10 : 0
             };
+        } catch (error) {
+            console.error(`Failed to get agreement usage for ${agreementId}:`, error);
+            return null;
         }
-        
-        return null;
     }
 
     /**
@@ -241,21 +273,33 @@ class AcceloAPI {
                     this.getAgreements(companyId, { standing: 'active' })
                 ]);
                 
-                // Get hours for each project
-                const projectsWithHours = await Promise.all(
-                    projects.map(async (project) => {
+                // Get hours for each project with rate limiting
+                const projectsWithHours = [];
+                for (const project of projects) {
+                    try {
                         const hours = await this.getProjectHours(project.id);
-                        return { ...project, hours };
-                    })
-                );
+                        projectsWithHours.push({ ...project, hours });
+                        // Small delay to avoid rate limiting
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    } catch (error) {
+                        console.error(`Failed to get hours for project ${project.id}:`, error);
+                        projectsWithHours.push({ ...project, hours: null });
+                    }
+                }
                 
-                // Get usage for each agreement
-                const agreementsWithUsage = await Promise.all(
-                    agreements.map(async (agreement) => {
+                // Get usage for each agreement with rate limiting
+                const agreementsWithUsage = [];
+                for (const agreement of agreements) {
+                    try {
                         const usage = await this.getAgreementUsage(agreement.id);
-                        return { ...agreement, usage };
-                    })
-                );
+                        agreementsWithUsage.push({ ...agreement, usage });
+                        // Small delay to avoid rate limiting
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    } catch (error) {
+                        console.error(`Failed to get usage for agreement ${agreement.id}:`, error);
+                        agreementsWithUsage.push({ ...agreement, usage: null });
+                    }
+                }
                 
                 data.push({
                     company,
@@ -280,17 +324,40 @@ class AcceloAPI {
      * Search for companies, projects, and agreements
      */
     async searchAll(query) {
-        const [companies, projects, agreements] = await Promise.all([
-            this.request(`/companies?_search=${encodeURIComponent(query)}&_limit=20`),
-            this.request(`/jobs?_search=${encodeURIComponent(query)}&_limit=20`),
-            this.request(`/contracts?_search=${encodeURIComponent(query)}&_limit=20`)
-        ]);
+        try {
+            // Include against field to get parent company info for projects and agreements
+            const [companies, projects, agreements] = await Promise.all([
+                this.request(`/companies?_search=${encodeURIComponent(query)}&_limit=20&_fields=id,name,website,phone,standing`),
+                this.request(`/jobs?_search=${encodeURIComponent(query)}&_limit=20&_fields=id,title,standing,status,against`),
+                this.request(`/contracts?_search=${encodeURIComponent(query)}&_limit=20&_fields=id,title,standing,status,against`)
+            ]);
 
-        return {
-            companies: companies.response || [],
-            projects: projects.response || [],
-            agreements: agreements.response || []
-        };
+            // Process projects to include company info
+            const processedProjects = (projects?.response || []).map(project => ({
+                ...project,
+                company_info: project.against || null
+            }));
+
+            // Process agreements to include company info
+            const processedAgreements = (agreements?.response || []).map(agreement => ({
+                ...agreement,
+                company_info: agreement.against || null
+            }));
+
+            return {
+                companies: companies?.response || [],
+                projects: processedProjects,
+                agreements: processedAgreements
+            };
+        } catch (error) {
+            console.error('Search failed:', error);
+            // Return empty results rather than throwing
+            return {
+                companies: [],
+                projects: [],
+                agreements: []
+            };
+        }
     }
 }
 

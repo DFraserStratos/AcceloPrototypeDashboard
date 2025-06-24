@@ -55,27 +55,45 @@ class Dashboard {
      * Set up event listeners
      */
     setupEventListeners() {
-        // Company selection
-        document.getElementById('companyList').addEventListener('click', (e) => {
-            const card = e.target.closest('.company-card');
-            if (card) {
-                this.selectCompany(card.dataset.companyId);
+        // Store references to event handlers for cleanup
+        this.eventHandlers = {
+            companyClick: (e) => {
+                const card = e.target.closest('.company-card');
+                if (card && !this.isSelectingCompany) {
+                    this.selectCompanyDebounced(card.dataset.companyId);
+                }
+            },
+            modalClick: (e) => {
+                if (e.target.id === 'addItemModal') {
+                    this.hideAddItemModal();
+                }
+            },
+            escapeKey: (e) => {
+                if (e.key === 'Escape') {
+                    this.hideAddItemModal();
+                }
             }
-        });
+        };
+        
+        // Company selection with debouncing
+        document.getElementById('companyList').addEventListener('click', this.eventHandlers.companyClick);
         
         // Modal backdrop click
-        document.getElementById('addItemModal').addEventListener('click', (e) => {
-            if (e.target.id === 'addItemModal') {
-                this.hideAddItemModal();
-            }
-        });
+        document.getElementById('addItemModal').addEventListener('click', this.eventHandlers.modalClick);
         
         // Escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                this.hideAddItemModal();
-            }
-        });
+        document.addEventListener('keydown', this.eventHandlers.escapeKey);
+    }
+    
+    /**
+     * Clean up event listeners
+     */
+    cleanupEventListeners() {
+        if (this.eventHandlers) {
+            document.getElementById('companyList').removeEventListener('click', this.eventHandlers.companyClick);
+            document.getElementById('addItemModal').removeEventListener('click', this.eventHandlers.modalClick);
+            document.removeEventListener('keydown', this.eventHandlers.escapeKey);
+        }
     }
     
     /**
@@ -146,6 +164,24 @@ class Dashboard {
     }
     
     /**
+     * Select a company with debouncing
+     */
+    selectCompanyDebounced(companyId) {
+        // Clear any pending selection
+        if (this.companySelectTimeout) {
+            clearTimeout(this.companySelectTimeout);
+        }
+        
+        // Set flag to prevent rapid clicks
+        this.isSelectingCompany = true;
+        
+        this.companySelectTimeout = setTimeout(() => {
+            this.selectCompany(companyId);
+            this.isSelectingCompany = false;
+        }, 100);
+    }
+    
+    /**
      * Select a company
      */
     selectCompany(companyId) {
@@ -176,6 +212,8 @@ class Dashboard {
                     </div>
                 </div>
             `;
+            // Hide refresh button when no companies
+            document.getElementById('contentActions').style.display = 'none';
             return;
         }
         
@@ -197,6 +235,36 @@ class Dashboard {
     }
     
     /**
+     * Refresh current company data
+     */
+    async refreshCurrentCompany() {
+        if (!this.selectedCompanyId) return;
+        
+        try {
+            UIComponents.showLoading();
+            
+            // Fetch fresh data for this company
+            const updatedData = await window.acceloAPI.getDashboardData([this.selectedCompanyId]);
+            
+            if (updatedData.length > 0) {
+                // Update the data in our dashboard state
+                const index = this.dashboardData.findIndex(item => item.company.id == this.selectedCompanyId);
+                if (index !== -1) {
+                    this.dashboardData[index] = updatedData[0];
+                    this.saveDashboardState();
+                    this.renderCompanyContent(this.selectedCompanyId);
+                    UIComponents.showToast('Data refreshed successfully', 'success');
+                }
+            }
+        } catch (error) {
+            console.error('Failed to refresh company data:', error);
+            UIComponents.showToast('Failed to refresh data: ' + error.message, 'error');
+        } finally {
+            UIComponents.hideLoading();
+        }
+    }
+    
+    /**
      * Render company content in main area
      */
     renderCompanyContent(companyId) {
@@ -205,8 +273,12 @@ class Dashboard {
         
         const titleEl = document.getElementById('contentTitle');
         const gridEl = document.getElementById('contentGrid');
+        const actionsEl = document.getElementById('contentActions');
         
         titleEl.textContent = data.company.name;
+        
+        // Show refresh button when company is selected
+        actionsEl.style.display = 'flex';
         
         // Clear existing content
         gridEl.innerHTML = '';
@@ -279,7 +351,19 @@ class Dashboard {
     hideAddItemModal() {
         const modal = document.getElementById('addItemModal');
         modal.classList.remove('show');
+        
+        // Clear selected items
         this.selectedItems.clear();
+        
+        // Clear search timeout
+        if (this.searchTimeout) {
+            clearTimeout(this.searchTimeout);
+            this.searchTimeout = null;
+        }
+        
+        // Clear search results
+        document.getElementById('searchInput').value = '';
+        this.renderSearchResults(null);
     }
     
     /**

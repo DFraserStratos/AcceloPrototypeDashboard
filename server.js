@@ -43,7 +43,21 @@ app.all('/api/proxy', (req, res) => {
         return;
     }
     
-    const parsedUrl = new URL(targetUrl);
+    // Security: Validate target URL
+    const allowedHosts = ['api.accelo.com', 'accelo.com'];
+    let parsedUrl;
+    try {
+        parsedUrl = new URL(targetUrl);
+        const isAllowed = allowedHosts.some(host => parsedUrl.hostname.endsWith(host));
+        if (!isAllowed) {
+            res.status(403).json({ error: 'Forbidden: Invalid target host' });
+            addLog('error', `Blocked request to forbidden host: ${parsedUrl.hostname}`);
+            return;
+        }
+    } catch (error) {
+        res.status(400).json({ error: 'Invalid URL format' });
+        return;
+    }
     const options = {
         hostname: parsedUrl.hostname,
         port: parsedUrl.port || 443,
@@ -216,6 +230,355 @@ app.post('/api/logs/clear', (req, res) => {
     addLog('info', 'API logs cleared');
     res.json({ success: true });
 });
+
+// Chat API endpoints for AI integration
+// These endpoints leverage the existing proxy but provide structured responses for AI consumption
+
+app.get('/api/chat/status', (req, res) => {
+    if (!apiSettings || !apiSettings.accessToken) {
+        return res.status(400).json({
+            error: 'No API credentials configured',
+            message: 'Please configure your Accelo API credentials in the Settings page first',
+            action: 'Visit /settings to configure credentials'
+        });
+    }
+
+    // Check if token is expired
+    const now = Date.now();
+    const expiryTime = new Date(apiSettings.tokenExpiry).getTime();
+    
+    if (now >= expiryTime) {
+        return res.status(401).json({
+            error: 'Access token expired',
+            message: 'Your API token has expired and needs to be refreshed',
+            expiry: apiSettings.tokenExpiry,
+            action: 'Visit /settings to refresh your credentials'
+        });
+    }
+
+    res.json({
+        status: 'connected',
+        deployment: apiSettings.deployment,
+        user: {
+            name: apiSettings.userName,
+            email: apiSettings.userEmail
+        },
+        token_expires: apiSettings.tokenExpiry,
+        time_remaining: Math.floor((expiryTime - now) / (1000 * 60 * 60 * 24)) + ' days'
+    });
+});
+
+app.get('/api/chat/companies', async (req, res) => {
+    if (!apiSettings || !apiSettings.accessToken) {
+        return res.status(400).json({
+            error: 'No API credentials configured',
+            action: 'Visit /settings to configure credentials'
+        });
+    }
+
+    try {
+        const { search, limit = 10, offset = 0 } = req.query;
+        
+        // Build API URL
+        let apiUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/companies`;
+        const params = new URLSearchParams({
+            _fields: 'id,name,website,phone,standing,status,date_created,date_modified',
+            _limit: limit,
+            _offset: offset
+        });
+        
+        if (search) {
+            params.append('_search', search);
+        }
+        
+        apiUrl += '?' + params.toString();
+        
+        // Make request through existing proxy logic
+        const response = await makeAcceloRequest(apiUrl, apiSettings.accessToken);
+        
+        res.json({
+            success: true,
+            companies: response.response || [],
+            meta: {
+                count: response.response ? response.response.length : 0,
+                search_term: search || null,
+                pagination: {
+                    limit: parseInt(limit),
+                    offset: parseInt(offset)
+                }
+            }
+        });
+        
+    } catch (error) {
+        addLog('error', `Chat API - Companies Error: ${error.message}`);
+        res.status(500).json({
+            error: 'Failed to fetch companies',
+            message: error.message,
+            action: 'Check your API credentials and try again'
+        });
+    }
+});
+
+app.get('/api/chat/company/:id', async (req, res) => {
+    if (!apiSettings || !apiSettings.accessToken) {
+        return res.status(400).json({
+            error: 'No API credentials configured',
+            action: 'Visit /settings to configure credentials'
+        });
+    }
+
+    try {
+        const companyId = req.params.id;
+        
+        // Get company details
+        const companyUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/companies/${companyId}?_fields=id,name,website,phone,standing,status,date_created,date_modified,custom_fields`;
+        
+        // Get company projects
+        const projectsUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/jobs?_filters=against_type(company),against_id(${companyId})&_fields=id,title,status,standing,manager,date_started,date_due,billable_seconds,unbillable_seconds&_limit=50`;
+        
+        // Get company agreements
+        const agreementsUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/contracts?_filters=against_type(company),against_id(${companyId})&_fields=id,title,status,standing,date_started,date_expires,retainer_type&_limit=50`;
+        
+        // Make all requests
+        const [companyResponse, projectsResponse, agreementsResponse] = await Promise.all([
+            makeAcceloRequest(companyUrl, apiSettings.accessToken),
+            makeAcceloRequest(projectsUrl, apiSettings.accessToken),
+            makeAcceloRequest(agreementsUrl, apiSettings.accessToken)
+        ]);
+        
+        // Get agreement periods for active agreements
+        const agreements = agreementsResponse.response || [];
+        const agreementDetails = await Promise.all(
+            agreements.map(async (agreement) => {
+                if (agreement.standing === 'active') {
+                    try {
+                        const periodsUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/contracts/${agreement.id}/periods?_limit=1&_order_by=date_commenced&_order_by_desc=1`;
+                        const periodsResponse = await makeAcceloRequest(periodsUrl, apiSettings.accessToken);
+                        agreement.current_period = periodsResponse.response ? periodsResponse.response[0] : null;
+                    } catch (error) {
+                        addLog('error', `Failed to get periods for agreement ${agreement.id}: ${error.message}`);
+                        agreement.current_period = null;
+                    }
+                }
+                return agreement;
+            })
+        );
+        
+        res.json({
+            success: true,
+            company: companyResponse.response,
+            projects: projectsResponse.response || [],
+            agreements: agreementDetails,
+            summary: {
+                total_projects: (projectsResponse.response || []).length,
+                active_projects: (projectsResponse.response || []).filter(p => p.standing === 'active').length,
+                total_agreements: agreements.length,
+                active_agreements: agreements.filter(a => a.standing === 'active').length
+            }
+        });
+        
+    } catch (error) {
+        addLog('error', `Chat API - Company Details Error: ${error.message}`);
+        res.status(500).json({
+            error: 'Failed to fetch company details',
+            message: error.message,
+            company_id: req.params.id,
+            action: 'Verify the company ID exists and try again'
+        });
+    }
+});
+
+app.get('/api/chat/project/:id', async (req, res) => {
+    if (!apiSettings || !apiSettings.accessToken) {
+        return res.status(400).json({
+            error: 'No API credentials configured',
+            action: 'Visit /settings to configure credentials'
+        });
+    }
+
+    try {
+        const projectId = req.params.id;
+        
+        // Get project details
+        const projectUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/jobs/${projectId}?_fields=id,title,description,status,standing,manager,against,date_started,date_due,billable_seconds,unbillable_seconds,custom_fields`;
+        
+        // Get project time allocations
+        const allocationsUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/activities/allocations?_filters=against_type(job),against_id(${projectId})&_fields=billable,nonbillable,logged,charged&_limit=1`;
+        
+        const [projectResponse, allocationsResponse] = await Promise.all([
+            makeAcceloRequest(projectUrl, apiSettings.accessToken),
+            makeAcceloRequest(allocationsUrl, apiSettings.accessToken)
+        ]);
+        
+        const project = projectResponse.response;
+        const allocation = allocationsResponse.response && allocationsResponse.response[0];
+        
+        res.json({
+            success: true,
+            project: project,
+            time_summary: {
+                billable_hours: project.billable_seconds ? (project.billable_seconds / 3600).toFixed(2) : '0.00',
+                unbillable_hours: project.unbillable_seconds ? (project.unbillable_seconds / 3600).toFixed(2) : '0.00',
+                total_hours: project.billable_seconds && project.unbillable_seconds 
+                    ? ((project.billable_seconds + project.unbillable_seconds) / 3600).toFixed(2) 
+                    : '0.00',
+                allocation_details: allocation
+            }
+        });
+        
+    } catch (error) {
+        addLog('error', `Chat API - Project Details Error: ${error.message}`);
+        res.status(500).json({
+            error: 'Failed to fetch project details',
+            message: error.message,
+            project_id: req.params.id,
+            action: 'Verify the project ID exists and try again'
+        });
+    }
+});
+
+app.get('/api/chat/agreement/:id', async (req, res) => {
+    if (!apiSettings || !apiSettings.accessToken) {
+        return res.status(400).json({
+            error: 'No API credentials configured',
+            action: 'Visit /settings to configure credentials'
+        });
+    }
+
+    try {
+        const agreementId = req.params.id;
+        
+        // Get agreement details
+        const agreementUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/contracts/${agreementId}?_fields=id,title,description,status,standing,against,date_started,date_expires,retainer_type,retainer_value,custom_fields`;
+        
+        // Get current period
+        const periodsUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/contracts/${agreementId}/periods?_limit=1&_order_by=date_commenced&_order_by_desc=1`;
+        
+        const [agreementResponse, periodsResponse] = await Promise.all([
+            makeAcceloRequest(agreementUrl, apiSettings.accessToken),
+            makeAcceloRequest(periodsUrl, apiSettings.accessToken)
+        ]);
+        
+        const agreement = agreementResponse.response;
+        const currentPeriod = periodsResponse.response && periodsResponse.response[0];
+        
+        let usage_summary = null;
+        if (currentPeriod && currentPeriod.contract_budget) {
+            const budget = currentPeriod.contract_budget;
+            usage_summary = {
+                time_allowance_hours: budget.time ? (budget.time / 3600).toFixed(2) : '0.00',
+                time_used_hours: budget.time_used ? (budget.time_used / 3600).toFixed(2) : '0.00',
+                time_remaining_hours: budget.time_remaining ? (budget.time_remaining / 3600).toFixed(2) : '0.00',
+                usage_percentage: budget.time && budget.time_used 
+                    ? ((budget.time_used / budget.time) * 100).toFixed(1) + '%'
+                    : '0.0%',
+                value_budget: budget.value || 0,
+                value_used: budget.value_used || 0,
+                period_start: new Date(currentPeriod.date_commenced * 1000).toISOString().split('T')[0],
+                period_end: new Date(currentPeriod.date_expires * 1000).toISOString().split('T')[0]
+            };
+        }
+        
+        res.json({
+            success: true,
+            agreement: agreement,
+            current_period: currentPeriod,
+            usage_summary: usage_summary
+        });
+        
+    } catch (error) {
+        addLog('error', `Chat API - Agreement Details Error: ${error.message}`);
+        res.status(500).json({
+            error: 'Failed to fetch agreement details',
+            message: error.message,
+            agreement_id: req.params.id,
+            action: 'Verify the agreement ID exists and try again'
+        });
+    }
+});
+
+app.get('/api/chat/test/*', async (req, res) => {
+    if (!apiSettings || !apiSettings.accessToken) {
+        return res.status(400).json({
+            error: 'No API credentials configured',
+            action: 'Visit /settings to configure credentials'
+        });
+    }
+
+    try {
+        // Extract the endpoint from the path
+        const endpoint = req.params[0];
+        let apiUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/${endpoint}`;
+        
+        // Add query parameters if present
+        if (Object.keys(req.query).length > 0) {
+            apiUrl += '?' + new URLSearchParams(req.query).toString();
+        }
+        
+        const response = await makeAcceloRequest(apiUrl, apiSettings.accessToken);
+        
+        res.json({
+            success: true,
+            endpoint: endpoint,
+            url: apiUrl,
+            response: response
+        });
+        
+    } catch (error) {
+        addLog('error', `Chat API - Test Endpoint Error: ${error.message}`);
+        res.status(500).json({
+            error: 'Test endpoint failed',
+            message: error.message,
+            endpoint: req.params[0],
+            action: 'Check the endpoint path and parameters'
+        });
+    }
+});
+
+// Helper function to make Accelo API requests
+async function makeAcceloRequest(url, accessToken) {
+    return new Promise((resolve, reject) => {
+        const parsedUrl = new URL(url);
+        const options = {
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port || 443,
+            path: parsedUrl.pathname + parsedUrl.search,
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/json'
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            let data = '';
+            
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+            
+            res.on('end', () => {
+                try {
+                    const jsonData = JSON.parse(data);
+                    
+                    if (res.statusCode >= 400) {
+                        reject(new Error(`API Error ${res.statusCode}: ${jsonData.meta?.message || res.statusMessage}`));
+                    } else {
+                        resolve(jsonData);
+                    }
+                } catch (error) {
+                    reject(new Error(`Failed to parse API response: ${error.message}`));
+                }
+            });
+        });
+
+        req.on('error', (error) => {
+            reject(new Error(`Request failed: ${error.message}`));
+        });
+
+        req.end();
+    });
+}
 
 // Start server
 app.listen(PORT, () => {

@@ -13,6 +13,7 @@ A comprehensive dashboard application for Accelo that displays companies, projec
 - [Project Structure](#project-structure)
 - [Development Guide](#development-guide)
 - [API Reference](#api-reference)
+- [Chat API for AI Integration](#chat-api-for-ai-integration)
 - [Security Considerations](#security-considerations)
 - [Troubleshooting](#troubleshooting)
 - [Current Limitations](#current-limitations)
@@ -480,6 +481,34 @@ try {
 Authorization: Bearer {access_token}
 X-Target-URL: https://stp.api.accelo.com/api/v0/...
 ```
+
+## Chat API for AI Integration
+
+The dashboard includes a specialized Chat API that enables AI assistants to interact with your Accelo data programmatically. This API provides structured endpoints for:
+
+- **Status Checking**: Verify API credentials and connection status
+- **Company Management**: Search and retrieve company information
+- **Project Access**: Get detailed project data including time tracking
+- **Agreement Monitoring**: Access contract details and usage metrics
+- **Generic Testing**: Test any Accelo API endpoint with custom parameters
+
+### Quick Start
+
+1. **Prerequisites**: Ensure your dashboard server is running and API credentials are configured
+2. **Status Check**: `GET http://localhost:8080/api/chat/status`
+3. **Search Companies**: `GET http://localhost:8080/api/chat/companies?search=acme`
+4. **Get Company Details**: `GET http://localhost:8080/api/chat/company/123`
+
+### Key Features
+
+- **Secure**: Uses existing credential storage, never exposes API keys
+- **Error-Friendly**: Provides actionable error messages for troubleshooting
+- **Comprehensive**: Access to all major Accelo resources
+- **Flexible**: Generic test endpoint for any API exploration
+
+### Full Documentation
+
+For complete Chat API documentation, examples, and troubleshooting, see **[CHAT_API_README.md](CHAT_API_README.md)**.
 
 ## Security Considerations
 
