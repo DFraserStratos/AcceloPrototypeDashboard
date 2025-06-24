@@ -174,11 +174,11 @@ class AcceloAPI {
             });
 
             const response = await this.request(`/activities/allocations?${params}`);
-            const allocations = response?.response || [];
+            const allocations = response?.response;
             
             // Handle empty response
-            if (!Array.isArray(allocations)) {
-                console.warn(`Invalid allocations response for project ${projectId}`);
+            if (!allocations) {
+                console.warn(`No allocations response for project ${projectId}`);
                 return {
                     billableHours: 0,
                     nonBillableHours: 0,
@@ -187,7 +187,7 @@ class AcceloAPI {
                 };
             }
             
-            // The API returns the total allocation as a single object, not an array
+            // The API can return either a single object or an array
             const allocation = Array.isArray(allocations) ? allocations[0] : allocations;
             
             if (!allocation) {
@@ -205,12 +205,15 @@ class AcceloAPI {
             const logged = parseFloat(allocation.logged || 0);
             const charged = parseFloat(allocation.charged || 0);
             
-            return {
+            const result = {
                 billableHours: Math.round(billable / 3600 * 10) / 10,
                 nonBillableHours: Math.round(nonbillable / 3600 * 10) / 10,
                 loggedHours: Math.round(logged / 3600 * 10) / 10,
                 chargedHours: Math.round(charged / 3600 * 10) / 10
             };
+            
+            console.log(`Project ${projectId} hours:`, result, 'Raw allocation:', allocation);
+            return result;
         } catch (error) {
             console.error(`Failed to get project hours for ${projectId}:`, error);
             return {
