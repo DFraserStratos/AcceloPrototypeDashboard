@@ -35,145 +35,14 @@
     gap: var(--spacing-md);
 }
 
-/* Sidebar */
-.sidebar {
-    position: fixed;
-    top: 60px;
-    left: 0;
-    bottom: 0;
-    width: 280px;
-    background-color: var(--sidebar-bg);
-    border-right: 1px solid var(--border-color);
-    overflow-y: auto;
-    padding: var(--spacing-lg);
-}
-
-.sidebar-header {
-    margin-bottom: var(--spacing-lg);
-}
-
-.company-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
-}
-
-/* Company Card */
-.company-card {
-    background-color: var(--surface-color);
-    border-radius: var(--radius-md);
-    padding: var(--spacing-md);
-    box-shadow: var(--shadow-sm);
-    transition: all 0.3s ease;
-    cursor: pointer;
-    position: relative;
-}
-
-.company-card:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
-}
-
-.company-card.active {
-    border: 2px solid var(--primary-color);
-    padding: calc(var(--spacing-md) - 2px);
-}
-
-.company-card-header {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    position: relative;
-}
-
-.company-icon {
-    width: 40px;
-    height: 40px;
-    background-color: var(--primary-color);
-    color: white;
-    border-radius: var(--radius-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 1.1rem;
-}
-
-.company-info {
-    flex: 1;
-    min-width: 0; /* Allow text to truncate */
-}
-
-.company-name {
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 2px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.company-meta {
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-
-.company-card-indicator {
-    position: absolute;
-    right: var(--spacing-sm);
-    top: var(--spacing-sm);
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: var(--success-color);
-}
-
-/* Remove buttons */
-.btn-remove {
-    opacity: 0;
-    transition: opacity 0.2s ease, color 0.2s ease;
-    color: var(--text-secondary) !important;
-    padding: 4px !important;
-    min-width: unset !important;
-    width: 24px !important;
-    height: 24px !important;
-    flex-shrink: 0;
-}
-
-.btn-remove:hover {
-    color: var(--danger-color) !important;
-    background-color: rgba(220, 53, 69, 0.1) !important;
-}
-
-.company-remove-btn {
-    margin-left: auto;
-}
-
-.block-remove-btn {
-    position: absolute;
-    top: var(--spacing-md);
-    right: var(--spacing-md);
-}
-
-/* Show remove buttons on hover */
-.company-card:hover .company-remove-btn,
-.progress-tracker-block:hover .block-remove-btn {
-    opacity: 1;
-}
-
-/* Icon styling */
-.icon-remove {
-    font-size: 14px;
-    font-weight: bold;
-}
-
-/* Main Content */
+/* Main Content (Full Width) */
 .main-content {
-    margin-left: 280px;
     margin-top: 60px;
     padding: var(--spacing-lg);
     overflow-y: auto;
     height: calc(100vh - 60px);
+    background-color: var(--background-color);
+    width: 100%;
 }
 
 .content-header {
@@ -194,278 +63,450 @@
 }
 
 .content-grid {
-    display: grid;
-    gap: var(--spacing-lg);
+    width: 100%;
 }
 
-/* Progress Tracker Blocks */
-.progress-blocks-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-xl);
-}
-
-.progress-tracker-block {
-    background-color: var(--surface-color);
-    border-radius: var(--radius-md);
-    padding: var(--spacing-lg);
-    box-shadow: var(--shadow-sm);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.progress-tracker-block:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
-}
-
-.progress-block-header {
+/* Company Grouped Layout */
+.company-grouped-layout {
     display: flex;
-    align-items: flex-start;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-md);
-    position: relative;
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
 }
 
-.progress-block-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-sm);
+.company-row {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    margin-bottom: var(--spacing-md);
+}
+
+/* Company Block (Left Side) */
+.company-block {
+    width: 120px;
+    background-color: var(--surface-color);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-right: var(--spacing-md);
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 60px;
     flex-shrink: 0;
 }
 
-.progress-block-icon.project {
-    background-color: var(--primary-color);
-    color: white;
+.company-block-content {
+    text-align: center;
+    padding: var(--spacing-sm);
 }
 
-.progress-block-icon.agreement {
-    background-color: var(--secondary-color);
-    color: white;
+.company-block-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.2;
+    word-wrap: break-word;
 }
 
-.progress-block-info {
+/* Progress Blocks Container (Right Side) */
+.progress-blocks-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+/* Compact Progress Block */
+.compact-progress-block {
+    background-color: #fff3e0;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    position: relative;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.compact-progress-block:hover {
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+}
+
+.compact-block-content {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: var(--spacing-lg);
+}
+
+.compact-block-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
     flex: 1;
     min-width: 0;
 }
 
-.progress-block-title {
+.compact-block-icon {
+    font-size: 1rem;
+    width: 20px;
+    flex-shrink: 0;
+}
+
+.compact-block-title {
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 2px;
+    margin-right: var(--spacing-md);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: calc(100% - 30px); /* Account for remove button space */
+    flex: 1;
 }
 
-.progress-block-subtitle {
-    font-size: 12px;
+.compact-block-type {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.compact-hours-section {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    margin-right: var(--spacing-lg);
+}
+
+.compact-hours-display {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.compact-hours-logged {
+    color: var(--text-primary);
+}
+
+.compact-hours-separator {
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.compact-hours-total {
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.compact-percentage {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    min-width: 50px;
+    text-align: right;
+}
+
+.compact-progress-bar {
+    width: 200px;
+    height: 8px;
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.compact-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50 0%, #81C784 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* Remove Button */
+.compact-remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    color: var(--text-secondary) !important;
+    padding: 4px !important;
+    min-width: unset !important;
+    width: 20px !important;
+    height: 20px !important;
+}
+
+.compact-progress-block:hover .compact-remove-btn {
+    opacity: 1;
+}
+
+.compact-remove-btn:hover {
+    color: var(--danger-color) !important;
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
+/* Dashboard Welcome/Overview */
+.dashboard-welcome {
+    text-align: center;
+    padding: var(--spacing-xxl) var(--spacing-lg);
+    background-color: var(--surface-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.welcome-icon {
+    font-size: 4rem;
+    margin-bottom: var(--spacing-lg);
+}
+
+.dashboard-welcome h2 {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+.dashboard-welcome p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xl);
+}
+
+/* Overview Dashboard */
+.overview-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+.overview-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.overview-description {
+    text-align: center;
+    padding: var(--spacing-xl);
+    background-color: var(--surface-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.overview-description h3 {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+.overview-description p {
     color: var(--text-secondary);
 }
 
-.progress-block-metrics {
+/* Company Dashboard */
+.company-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.stat-card {
+    background-color: var(--surface-color);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.stat-icon {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Dashboard Sections */
+.dashboard-section {
+    background-color: var(--surface-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.section-title {
+    margin-bottom: var(--spacing-lg);
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+/* Project and Agreement Cards */
+.project-cards,
+.agreement-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.project-card,
+.agreement-card {
+    background-color: var(--gray-50);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.project-card:hover,
+.agreement-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
     margin-bottom: var(--spacing-md);
 }
 
-.metric-row {
+.card-icon {
+    font-size: 1.25rem;
+}
+
+.card-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.card-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.metric {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 4px;
 }
 
 .metric-label {
-    font-size: 14px;
+    font-size: 0.875rem;
     color: var(--text-secondary);
 }
 
 .metric-value {
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 0.875rem;
+    font-weight: 600;
     color: var(--text-primary);
 }
 
-.progress-bar-container {
-    margin-top: var(--spacing-md);
-}
-
-.progress-bar {
-    height: 8px;
+/* Progress Bar Small */
+.progress-bar-small {
+    height: 6px;
     background-color: var(--gray-200);
-    border-radius: 4px;
+    border-radius: 3px;
     overflow: hidden;
-    margin-bottom: 4px;
+    margin-top: var(--spacing-xs);
 }
 
-.progress-bar-fill {
+.progress-fill {
     height: 100%;
-    background-color: var(--success-color);
     transition: width 0.3s ease;
 }
 
-.progress-bar-fill.warning {
-    background-color: var(--warning-color);
-}
-
-.progress-bar-fill.danger {
-    background-color: var(--danger-color);
-}
-
-.progress-percentage {
-    font-size: 12px;
-    color: var(--text-secondary);
-    text-align: right;
-}
-
-/* Confirmation Dialog */
-.confirmation-dialog {
-    z-index: 1100;
-}
-
-.confirmation-modal {
-    max-width: 400px;
-    margin: 10vh auto;
-}
-
-.confirmation-modal .modal-header {
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: var(--spacing-md);
-    margin-bottom: var(--spacing-md);
-}
-
-.confirmation-modal .modal-header h3 {
-    color: var(--text-primary);
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin: 0;
-}
-
-.confirmation-modal .modal-body {
-    margin-bottom: var(--spacing-lg);
-}
-
-.confirmation-modal .modal-body p {
-    color: var(--text-secondary);
-    line-height: 1.5;
-    margin: 0;
-}
-
-.confirmation-modal .modal-footer {
+/* Deadlines List */
+.deadlines-list {
     display: flex;
+    flex-direction: column;
     gap: var(--spacing-sm);
-    justify-content: flex-end;
 }
 
-/* Danger button variant */
-.btn-danger {
-    background-color: var(--danger-color);
-    color: white;
-    border: 1px solid var(--danger-color);
-}
-
-.btn-danger:hover {
-    background-color: #c82333;
-    border-color: #bd2130;
-}
-
-.btn-danger:focus {
-    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25);
-}
-
-/* Add Item Modal */
-.add-item-search {
-    margin-bottom: var(--spacing-lg);
-}
-
-.search-results {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.search-result-section {
-    margin-bottom: var(--spacing-lg);
-}
-
-.search-result-section h3 {
-    font-size: 14px;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-    margin-bottom: var(--spacing-md);
-}
-
-.search-result-item {
-    padding: var(--spacing-md);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    margin-bottom: var(--spacing-sm);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.search-result-item:hover {
-    border-color: var(--primary-color);
-    background-color: var(--background-color);
-}
-
-.search-result-item.selected {
-    border-color: var(--primary-color);
-    background-color: #e8f5e9;
-}
-
-.result-item-header {
+.deadline-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: var(--spacing-sm);
+    background-color: var(--gray-50);
+    border-radius: var(--radius-sm);
 }
 
-.result-item-title {
+.deadline-info {
+    flex: 1;
+}
+
+.deadline-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.deadline-type {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+}
+
+.deadline-date {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
     font-weight: 500;
+}
+
+/* Error State */
+.error-state {
+    text-align: center;
+    padding: var(--spacing-xxl);
+    background-color: var(--surface-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.error-icon {
+    font-size: 3rem;
+    margin-bottom: var(--spacing-lg);
+}
+
+.error-state h3 {
+    margin-bottom: var(--spacing-md);
     color: var(--text-primary);
 }
 
-.result-item-type {
+.error-state p {
+    color: var(--text-secondary);
+}
+
+/* Icon styling */
+.icon-remove {
     font-size: 12px;
-    padding: 2px 8px;
-    border-radius: 12px;
-    background-color: var(--background-color);
-    color: var(--text-secondary);
-}
-
-.result-item-meta {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-top: 4px;
-}
-
-/* Empty States */
-.empty-state {
-    text-align: center;
-    padding: var(--spacing-xl) var(--spacing-lg);
-    color: var(--text-secondary);
-}
-
-.empty-state-icon {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto var(--spacing-md);
-    opacity: 0.5;
-}
-
-.empty-state-title {
-    font-size: 18px;
-    font-weight: 500;
-    margin-bottom: var(--spacing-sm);
-}
-
-.empty-state-description {
-    font-size: 14px;
-    margin-bottom: var(--spacing-lg);
+    font-weight: bold;
 }
 
 /* Loading States */
@@ -493,260 +534,57 @@
 }
 
 /* Responsive Design */
-@media (max-width: 1200px) {
-    .progress-blocks-container {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    }
-}
-
 @media (max-width: 768px) {
-    .sidebar {
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
+    .company-row {
+        flex-direction: column;
     }
     
-    .sidebar.open {
-        transform: translateX(0);
+    .company-block {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: var(--spacing-sm);
+        min-height: 40px;
     }
     
-    .main-content {
-        margin-left: 0;
+    .compact-hours-section {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+        align-items: flex-start;
     }
     
-    .navbar {
-        padding: 0 var(--spacing-md);
+    .compact-progress-bar {
+        width: 150px;
     }
     
-    .progress-blocks-container {
-        grid-template-columns: 1fr;
+    .compact-block-content {
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
     }
 }
 
-/* Animations */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.fade-in {
-    animation: fadeIn 0.3s ease;
-}
-
-/* Icons (using CSS for simple shapes) */
-.icon-project::before {
-    content: "📁";
-    font-size: 24px;
-}
-
-.icon-agreement::before {
-    content: "📋";
-    font-size: 24px;
-}
-
-.icon-settings::before {
-    content: "⚙️";
-    font-size: 20px;
-}
-
-.icon-add::before {
-    content: "+";
-    font-size: 20px;
-    font-weight: bold;
-}
-
-.icon-refresh {
-    display: inline-block;
-    animation: none;
-    transition: transform 0.3s ease;
-}
-
-.btn:hover .icon-refresh {
-    transform: rotate(180deg);
-}
-
-.btn:active .icon-refresh {
-    animation: spin 0.5s ease-in-out;
-}
-
-/* Modal Step 2 - Item Selection */
-.item-selection-company {
-    margin-bottom: var(--spacing-lg);
-}
-
-.company-section-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: var(--spacing-md);
-    padding-bottom: var(--spacing-sm);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.company-items {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-}
-
-.selectable-item {
-    background-color: var(--surface-color);
-    border: 2px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: var(--spacing-md);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.selectable-item:hover {
-    border-color: var(--primary-color);
-    background-color: rgba(76, 175, 80, 0.05);
-}
-
-.selectable-item.selected {
-    border-color: var(--primary-color);
-    background-color: rgba(76, 175, 80, 0.1);
-}
-
-.selectable-item-content {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-}
-
-.selectable-item-icon {
-    font-size: 1.5rem;
-    flex-shrink: 0;
-}
-
-.selectable-item-info {
-    flex: 1;
-}
-
-.selectable-item-title {
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 2px;
-}
-
-.selectable-item-type {
-    font-size: 12px;
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-xl);
     color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
-/* Sidebar - New Structure */
-.company-section {
-    margin-bottom: var(--spacing-lg);
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: var(--spacing-md);
+    opacity: 0.5;
 }
 
-.company-section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-md);
-    background-color: var(--gray-200);
-    border-radius: var(--radius-sm);
+.empty-state-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
     margin-bottom: var(--spacing-sm);
 }
 
-.company-section-title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-}
-
-.company-item-count {
-    font-size: 11px;
-    color: var(--text-secondary);
-    background-color: white;
-    padding: 2px 6px;
-    border-radius: 10px;
-}
-
-.company-section-items {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-}
-
-.sidebar-item {
-    background-color: var(--surface-color);
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-    position: relative;
-}
-
-.sidebar-item:hover {
-    background-color: rgba(76, 175, 80, 0.05);
-}
-
-.sidebar-item-content {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm);
-    position: relative;
-}
-
-.sidebar-item-icon {
-    font-size: 1rem;
-    flex-shrink: 0;
-}
-
-.sidebar-item-title {
-    flex: 1;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-primary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
-}
-
-.sidebar-remove-btn {
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    position: absolute;
-    right: var(--spacing-xs);
-    top: 50%;
-    transform: translateY(-50%);
-    padding: 2px !important;
-    width: 18px !important;
-    height: 18px !important;
-    font-size: 10px;
-}
-
-.sidebar-item:hover .sidebar-remove-btn {
-    opacity: 1;
-}
-
-.sidebar-item-project .sidebar-item-icon {
-    color: var(--primary-color);
-}
-
-.sidebar-item-agreement .sidebar-item-icon {
-    color: var(--secondary-color);
-}
-
-/* Progress blocks - adjust for individual items */
-.progress-tracker-block {
-    /* Remove company selection highlighting since we don't need it anymore */
-}
-
-/* Modal help text */
-.modal-help-text {
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-style: italic;
-    display: flex;
-    align-items: center;
+.empty-state-description {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    max-width: 300px;
+    margin: 0 auto;
 }

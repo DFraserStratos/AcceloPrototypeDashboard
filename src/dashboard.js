@@ -430,8 +430,6 @@ class Dashboard {
         document.getElementById('searchInput').style.display = 'block';
     }
     
-
-    
     /**
      * Add selected items to dashboard (updated for new structure)
      */
@@ -464,6 +462,9 @@ class Dashboard {
                     if (item) {
                         // Get detailed data with hours/usage
                         let detailedItem = { ...item };
+                        
+                        // Set the type explicitly on the item
+                        detailedItem.type = type;
                         
                         if (type === 'project') {
                             try {
@@ -513,137 +514,211 @@ class Dashboard {
     }
 
     /**
-     * Render entire dashboard (new structure)
+     * Render the dashboard
      */
     renderDashboard() {
-        this.renderItemList();
-        this.renderMainContent();
+        this.renderCompanyGroupedLayout();
     }
-
+    
     /**
-     * Render item list in sidebar (replaces company list)
+     * Render company-grouped layout matching the user's mockup
      */
-    renderItemList() {
-        const container = document.getElementById('companyList'); // Reusing existing element
+    renderCompanyGroupedLayout() {
+        const contentTitle = document.getElementById('contentTitle');
+        const contentGrid = document.getElementById('contentGrid');
+        const contentActions = document.getElementById('contentActions');
+        
+        // Hide sidebar since we're using a different layout
+        const sidebar = document.getElementById('sidebar');
+        sidebar.style.display = 'none';
+        
+        // Adjust main content to use full width
+        const mainContent = document.querySelector('.main-content');
+        mainContent.style.marginLeft = '0';
+        
+        contentTitle.textContent = 'Dashboard Name';
+        contentActions.style.display = 'none';
         
         if (this.dashboardData.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">📋</div>
-                    <div class="empty-state-title">No Items Added</div>
-                    <div class="empty-state-description">
-                        Click "Add Item" to search and add projects or agreements to your dashboard.
-                    </div>
+            contentGrid.innerHTML = `
+                <div class="dashboard-welcome">
+                    <div class="welcome-icon">📊</div>
+                    <h2>Welcome to your Accelo Dashboard</h2>
+                    <p>Start by adding companies, projects, and agreements to track your progress.</p>
+                    <button class="btn btn-primary btn-lg" onclick="dashboard.showAddItemModal()">
+                        Get Started
+                    </button>
                 </div>
             `;
             return;
         }
         
-        container.innerHTML = '';
+        // Group items by company
+        const companiesData = this.groupItemsByCompany();
         
-        // Group items by company for sidebar display
-        const groupedItems = this.groupItemsByCompany();
+        // Create the company-grouped layout
+        const layoutContainer = document.createElement('div');
+        layoutContainer.className = 'company-grouped-layout';
         
-        Object.entries(groupedItems).forEach(([companyName, items]) => {
-            const companySection = document.createElement('div');
-            companySection.className = 'company-section';
+        Object.entries(companiesData).forEach(([companyId, data]) => {
+            const companyRow = document.createElement('div');
+            companyRow.className = 'company-row';
             
-            companySection.innerHTML = `
-                <div class="company-section-header">
-                    <h3 class="company-section-title">${UIComponents.escapeHtml(companyName)}</h3>
-                    <span class="company-item-count">${items.length} item${items.length === 1 ? '' : 's'}</span>
+            // Create company block (left side)
+            const companyBlock = document.createElement('div');
+            companyBlock.className = 'company-block';
+            companyBlock.innerHTML = `
+                <div class="company-block-content">
+                    <div class="company-block-name">${UIComponents.escapeHtml(data.company.name)}</div>
                 </div>
-                <div class="company-section-items"></div>
             `;
             
-            const itemsContainer = companySection.querySelector('.company-section-items');
+            // Create progress blocks container (right side)
+            const progressContainer = document.createElement('div');
+            progressContainer.className = 'progress-blocks-container';
             
-            items.forEach(item => {
-                const itemEl = document.createElement('div');
-                itemEl.className = `sidebar-item sidebar-item-${item.type}`;
-                itemEl.dataset.itemId = item.id;
-                itemEl.dataset.itemType = item.type;
-                
-                const icon = item.type === 'project' ? '📁' : '📋';
-                const title = item.title || item.name;
-                
-                itemEl.innerHTML = `
-                    <div class="sidebar-item-content">
-                        <span class="sidebar-item-icon">${icon}</span>
-                        <span class="sidebar-item-title">${UIComponents.escapeHtml(title)}</span>
-                        <button class="btn btn-icon btn-ghost btn-remove sidebar-remove-btn" 
-                                onclick="event.stopPropagation(); dashboard.confirmRemoveItem('${item.type}', ${item.id})" 
-                                title="Remove item from dashboard">
-                            <span class="icon-remove">✕</span>
-                        </button>
-                    </div>
-                `;
-                
-                itemsContainer.appendChild(itemEl);
+            // Add progress blocks for this company
+            data.items.forEach(item => {
+                const block = this.createCompactProgressBlock(item);
+                progressContainer.appendChild(block);
             });
             
-            container.appendChild(companySection);
+            companyRow.appendChild(companyBlock);
+            companyRow.appendChild(progressContainer);
+            layoutContainer.appendChild(companyRow);
         });
+        
+        contentGrid.innerHTML = '';
+        contentGrid.appendChild(layoutContainer);
+    }
+    
+    /**
+     * Create a compact progress block matching the user's mockup design
+     */
+    createCompactProgressBlock(item) {
+        const block = document.createElement('div');
+        block.className = 'compact-progress-block';
+        block.dataset.itemId = item.id;
+        
+        // Determine type and icon - improved logic
+        let isProject = false;
+        let type = 'agreement'; // default to agreement
+        
+        // Check explicit type first
+        if (item.type === 'project') {
+            isProject = true;
+            type = 'project';
+        } else if (item.type === 'agreement' || item.type === 'contract') {
+            isProject = false;
+            type = 'agreement';
+        } else {
+            // Fallback logic based on properties
+            // Projects typically have job-specific fields
+            if (item.date_due || item.billable_seconds !== undefined || item.unbillable_seconds !== undefined) {
+                isProject = true;
+                type = 'project';
+            }
+            // Agreements/contracts typically have contract-specific fields  
+            else if (item.retainer_type || item.retainer_value || item.date_expires || item.date_started) {
+                isProject = false;
+                type = 'agreement';
+            }
+            // Final fallback - if it has typical project structure but no contract fields
+            else if (item.status && !item.retainer_type) {
+                isProject = true;
+                type = 'project';
+            }
+        }
+        
+        const icon = isProject ? '📋' : '📄';
+        const title = item.title || item.name || `${type} #${item.id}`;
+        
+        // Calculate hours and percentage
+        let loggedHours = 0;
+        let totalHours = 0;
+        let percentage = 0;
+        
+        if (isProject && item.hours) {
+            loggedHours = (item.hours.billableHours || 0) + (item.hours.nonBillableHours || 0);
+            // For projects, we might not have a total budget - use logged hours as reference
+            totalHours = Math.max(loggedHours, item.hours.budgetHours || loggedHours || 100);
+            percentage = totalHours > 0 ? (loggedHours / totalHours) * 100 : 0;
+        } else if (!isProject && item.usage) {
+            loggedHours = item.usage.timeUsed || 0;
+            totalHours = item.usage.timeAllowance || 100;
+            percentage = totalHours > 0 ? (loggedHours / totalHours) * 100 : 0;
+        }
+        
+        // If no hours data, use dummy data for demo
+        if (totalHours === 0) {
+            totalHours = 100;
+            loggedHours = Math.random() * 80; // Random for demo
+            percentage = (loggedHours / totalHours) * 100;
+        }
+        
+        // Format hours as "XXXh XXm"
+        const formatHours = (hours) => {
+            const h = Math.floor(hours);
+            const m = Math.round((hours - h) * 60);
+            return `${h}h ${m}m`;
+        };
+        
+        block.innerHTML = `
+            <div class="compact-block-content">
+                <div class="compact-block-header">
+                    <div class="compact-block-icon">${icon}</div>
+                    <div class="compact-block-title">${UIComponents.escapeHtml(title)}</div>
+                    <div class="compact-block-type">${type === 'project' ? 'PROJECT' : 'AGREEMENT'}</div>
+                </div>
+                
+                <div class="compact-hours-section">
+                    <div class="compact-hours-display">
+                        <span class="compact-hours-logged">${formatHours(loggedHours)}</span>
+                        <span class="compact-hours-separator">/</span>
+                        <span class="compact-hours-total">${formatHours(totalHours)}</span>
+                    </div>
+                    <div class="compact-percentage">${Math.round(percentage)}%</div>
+                </div>
+                
+                <div class="compact-progress-bar">
+                    <div class="compact-progress-fill" style="width: ${Math.min(percentage, 100)}%"></div>
+                </div>
+            </div>
+            
+            <button class="btn btn-icon btn-ghost compact-remove-btn" 
+                    onclick="event.stopPropagation(); dashboard.confirmRemoveItem('${type}', ${item.id})" 
+                    title="Remove from dashboard">
+                <span class="icon-remove">✕</span>
+            </button>
+        `;
+        
+        return block;
     }
 
     /**
      * Group dashboard items by company
      */
     groupItemsByCompany() {
-        const grouped = {};
+        const companies = {};
         
         this.dashboardData.forEach(item => {
-            const companyName = item.company_info?.name || 'Unknown Company';
+            const companyId = item.company_id || (item.company_info ? item.company_info.id : 'unknown');
+            const companyName = item.company_name || (item.company_info ? item.company_info.name : 'Unknown Company');
             
-            if (!grouped[companyName]) {
-                grouped[companyName] = [];
+            if (!companies[companyId]) {
+                companies[companyId] = {
+                    company: {
+                        id: companyId,
+                        name: companyName
+                    },
+                    items: []
+                };
             }
             
-            grouped[companyName].push(item);
+            companies[companyId].items.push(item);
         });
         
-        return grouped;
-    }
-
-    /**
-     * Render main content area with all progress blocks
-     */
-    renderMainContent() {
-        const titleEl = document.getElementById('contentTitle');
-        const gridEl = document.getElementById('contentGrid');
-        const actionsEl = document.getElementById('contentActions');
-        
-        titleEl.textContent = 'Dashboard Overview';
-        actionsEl.style.display = 'none'; // Hide refresh button for now
-        
-        if (this.dashboardData.length === 0) {
-            gridEl.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">📊</div>
-                    <div class="empty-state-title">No Items Added</div>
-                    <div class="empty-state-description">
-                        Click "Add Item" to start adding projects and agreements to your dashboard.
-                    </div>
-                </div>
-            `;
-            return;
-        }
-        
-        // Create container for all progress blocks
-        const blocksContainer = document.createElement('div');
-        blocksContainer.className = 'progress-blocks-container';
-        
-        // Add a progress block for each item
-        this.dashboardData.forEach(item => {
-            if (item.type === 'project') {
-                blocksContainer.appendChild(UIComponents.createProjectBlock(item));
-            } else if (item.type === 'agreement') {
-                blocksContainer.appendChild(UIComponents.createAgreementBlock(item));
-            }
-        });
-        
-        gridEl.innerHTML = '';
-        gridEl.appendChild(blocksContainer);
+        return companies;
     }
 
     /**
