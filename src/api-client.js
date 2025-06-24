@@ -293,8 +293,8 @@ class AcceloAPI {
             const timeRemaining = timeAllowance - timeUsed;
             
             return {
-                periodStart: currentPeriod.date_commenced,
-                periodEnd: currentPeriod.date_expires,
+                periodStart: new Date(parseInt(currentPeriod.date_commenced) * 1000).toISOString().split('T')[0],
+                periodEnd: new Date(parseInt(currentPeriod.date_expires) * 1000).toISOString().split('T')[0],
                 timeAllowance: Math.round(timeAllowance * 10) / 10,
                 timeUsed: Math.round(timeUsed * 10) / 10,
                 timeRemaining: Math.round(timeRemaining * 10) / 10

@@ -17,6 +17,9 @@
                 <span class="icon-add"></span>
                 Add Item
             </button>
+            <button class="btn btn-icon btn-ghost" onclick="dashboard.refreshDashboardData()" title="Refresh All">
+                <i class="fa-solid fa-arrows-rotate"></i>
+            </button>
             <a href="/settings" class="btn btn-icon btn-ghost" title="Settings">
                 <i class="fa-solid fa-gear"></i>
             </a>
@@ -50,9 +53,7 @@
                     <p class="text-muted">Choose a company from the sidebar to view its projects and agreements.</p>
                 </div>
                 <div class="content-header-actions" id="contentActions" style="display: none;">
-                    <button class="btn btn-icon btn-ghost" onclick="dashboard.refreshCurrentCompany()" title="Refresh">
-                        <span class="icon-refresh">🔄</span>
-                    </button>
+                    <!-- Action buttons can be added here per company -->
                 </div>
             </div>
             

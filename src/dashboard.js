@@ -115,12 +115,53 @@ class Dashboard {
     }
     
     /**
-     * Refresh all dashboard data from API (deprecated - keeping for compatibility)
+     * Refresh all dashboard data from API
      */
     async refreshDashboardData() {
-        // This method is no longer used but kept for compatibility
-        console.warn('refreshDashboardData is deprecated, use renderDashboard instead');
-        this.renderDashboard();
+        if (this.dashboardData.length === 0) {
+            this.renderDashboard();
+            return;
+        }
+
+        try {
+            UIComponents.showLoading();
+            
+            // Refresh data for each item
+            for (let i = 0; i < this.dashboardData.length; i++) {
+                const item = this.dashboardData[i];
+                
+                if (item.type === 'project') {
+                    try {
+                        const hours = await window.acceloAPI.getProjectHours(item.id);
+                        this.dashboardData[i].hours = hours;
+                    } catch (error) {
+                        console.error(`Failed to refresh hours for project ${item.id}:`, error);
+                    }
+                } else if (item.type === 'agreement') {
+                    try {
+                        const usage = await window.acceloAPI.getAgreementUsage(item.id);
+                        this.dashboardData[i].usage = usage;
+                    } catch (error) {
+                        console.error(`Failed to refresh usage for agreement ${item.id}:`, error);
+                    }
+                }
+                
+                // Small delay to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // Save the refreshed data and re-render
+            this.saveDashboardState();
+            this.renderDashboard();
+            
+            UIComponents.showToast('Dashboard data refreshed successfully', 'success');
+            
+        } catch (error) {
+            console.error('Failed to refresh dashboard data:', error);
+            UIComponents.showToast('Failed to refresh data: ' + error.message, 'error');
+        } finally {
+            UIComponents.hideLoading();
+        }
     }
     
     /**
@@ -537,7 +578,14 @@ class Dashboard {
         mainContent.style.marginLeft = '0';
         
         contentTitle.textContent = 'Dashboard Name';
-        contentActions.style.display = 'none';
+        
+        // Show refresh button if we have items
+        contentActions.style.display = 'flex';
+        contentActions.innerHTML = `
+            <button class="btn btn-secondary" onclick="dashboard.refreshDashboardData()" title="Refresh all data">
+                <i class="fa-solid fa-refresh"></i> Refresh
+            </button>
+        `;
         
         if (this.dashboardData.length === 0) {
             contentGrid.innerHTML = `
@@ -664,12 +712,38 @@ class Dashboard {
             return `${h}h ${m}m`;
         };
         
+        // Format period dates for agreements
+        let periodInfo = '';
+        if (!isProject && item.usage && item.usage.periodStart && item.usage.periodEnd) {
+            const startDate = new Date(item.usage.periodStart + 'T00:00:00');
+            const endDate = new Date(item.usage.periodEnd + 'T00:00:00');
+            
+            const formatDate = (date) => {
+                return date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+            };
+            
+            if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+                periodInfo = `<div class="compact-period-info">${formatDate(startDate)} - ${formatDate(endDate)}</div>`;
+            }
+        }
+
         block.innerHTML = `
             <div class="compact-block-content">
-                <div class="compact-block-header">
-                    <div class="compact-block-icon">${icon}</div>
-                    <div class="compact-block-title">${UIComponents.escapeHtml(title)}</div>
-                    <div class="compact-block-type">${type === 'project' ? 'PROJECT' : 'AGREEMENT'}</div>
+                <div class="compact-block-left">
+                    <div class="compact-block-header">
+                        <div class="compact-block-icon">${icon}</div>
+                        <div class="compact-block-title-section">
+                            <div class="compact-block-title">${UIComponents.escapeHtml(title)}</div>
+                        </div>
+                        <div class="compact-block-type-section">
+                            <div class="compact-block-type">${type === 'project' ? 'PROJECT' : 'AGREEMENT'}</div>
+                            ${periodInfo}
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="compact-hours-section">
