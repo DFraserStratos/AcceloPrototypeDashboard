@@ -187,21 +187,29 @@ class AcceloAPI {
                 };
             }
             
-            // Sum up the hours
-            const totals = allocations.reduce((acc, allocation) => {
-                acc.billable += (allocation?.billable || 0);
-                acc.nonbillable += (allocation?.nonbillable || 0);
-                acc.logged += (allocation?.logged || 0);
-                acc.charged += (allocation?.charged || 0);
-                return acc;
-            }, { billable: 0, nonbillable: 0, logged: 0, charged: 0 });
+            // The API returns the total allocation as a single object, not an array
+            const allocation = Array.isArray(allocations) ? allocations[0] : allocations;
+            
+            if (!allocation) {
+                return {
+                    billableHours: 0,
+                    nonBillableHours: 0,
+                    loggedHours: 0,
+                    chargedHours: 0
+                };
+            }
 
-            // Convert seconds to hours
+            // Convert seconds to hours - handle string or number values
+            const billable = parseFloat(allocation.billable || 0);
+            const nonbillable = parseFloat(allocation.nonbillable || 0); 
+            const logged = parseFloat(allocation.logged || 0);
+            const charged = parseFloat(allocation.charged || 0);
+            
             return {
-                billableHours: Math.round(totals.billable / 3600 * 10) / 10,
-                nonBillableHours: Math.round(totals.nonbillable / 3600 * 10) / 10,
-                loggedHours: Math.round(totals.logged / 3600 * 10) / 10,
-                chargedHours: Math.round(totals.charged / 3600 * 10) / 10
+                billableHours: Math.round(billable / 3600 * 10) / 10,
+                nonBillableHours: Math.round(nonbillable / 3600 * 10) / 10,
+                loggedHours: Math.round(logged / 3600 * 10) / 10,
+                chargedHours: Math.round(charged / 3600 * 10) / 10
             };
         } catch (error) {
             console.error(`Failed to get project hours for ${projectId}:`, error);
@@ -220,14 +228,15 @@ class AcceloAPI {
     async getAgreementUsage(agreementId) {
         try {
             const params = new URLSearchParams({
-                _fields: 'id,date_commenced,date_expires,contract_budget',
-                _limit: 1,
+                _fields: 'id,date_commenced,date_expires,contract_budget,allowance,budget_used,standing',
+                _limit: 10,
                 _order_by: 'date_commenced',
                 _order_by_desc: 1
             });
 
             const response = await this.request(`/contracts/${agreementId}/periods?${params}`);
-            const periods = response?.response || [];
+            const periodsData = response?.response;
+            const periods = periodsData?.periods || [];
             
             // Handle empty or invalid response
             if (!Array.isArray(periods) || periods.length === 0) {
@@ -235,19 +244,60 @@ class AcceloAPI {
                 return null;
             }
             
-            const currentPeriod = periods[0];
+            // Find the current period (the one with standing "opened")
+            let currentPeriod = null;
+            
+            // First, look for an "opened" period
+            for (const period of periods) {
+                if (period.standing === 'opened') {
+                    currentPeriod = period;
+                    break;
+                }
+            }
+            
+            // If no opened period found, look for one that contains today's date
+            if (!currentPeriod) {
+                const now = Math.floor(Date.now() / 1000);
+                for (const period of periods) {
+                    const startDate = parseInt(period.date_commenced);
+                    const endDate = parseInt(period.date_expires);
+                    
+                    if (now >= startDate && now <= endDate) {
+                        currentPeriod = period;
+                        break;
+                    }
+                }
+            }
+            
+            // If still no current period found, use the most recent one
+            if (!currentPeriod && periods.length > 0) {
+                currentPeriod = periods[0];
+            }
+            
             if (!currentPeriod) {
                 return null;
             }
             
-            const budget = currentPeriod?.contract_budget || {};
+            // Handle the actual API structure
+            let timeAllowance = 0;
+            let timeUsed = 0;
+            
+            if (currentPeriod.allowance && currentPeriod.allowance.billable) {
+                timeAllowance = parseFloat(currentPeriod.allowance.billable) / 3600;
+            }
+            
+            if (currentPeriod.budget_used && currentPeriod.budget_used.value) {
+                timeUsed = parseFloat(currentPeriod.budget_used.value) / 3600;
+            }
+            
+            const timeRemaining = timeAllowance - timeUsed;
             
             return {
                 periodStart: currentPeriod.date_commenced,
                 periodEnd: currentPeriod.date_expires,
-                timeAllowance: budget?.time ? Math.round(budget.time / 3600 * 10) / 10 : 0,
-                timeUsed: budget?.time_used ? Math.round(budget.time_used / 3600 * 10) / 10 : 0,
-                timeRemaining: budget?.time_remaining ? Math.round(budget.time_remaining / 3600 * 10) / 10 : 0
+                timeAllowance: Math.round(timeAllowance * 10) / 10,
+                timeUsed: Math.round(timeUsed * 10) / 10,
+                timeRemaining: Math.round(timeRemaining * 10) / 10
             };
         } catch (error) {
             console.error(`Failed to get agreement usage for ${agreementId}:`, error);

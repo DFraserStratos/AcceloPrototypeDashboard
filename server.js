@@ -411,18 +411,33 @@ app.get('/api/chat/project/:id', async (req, res) => {
         ]);
         
         const project = projectResponse.response;
-        const allocation = allocationsResponse.response && allocationsResponse.response[0];
+        const allocation = allocationsResponse.response;
+        
+        // Calculate actual hours from allocations (which contain the real time data)
+        let billableHours = 0;
+        let unbillableHours = 0;
+        let totalHours = 0;
+        
+        if (allocation) {
+            // Convert seconds to hours
+            billableHours = allocation.billable ? parseFloat(allocation.billable) / 3600 : 0;
+            unbillableHours = allocation.nonbillable ? parseFloat(allocation.nonbillable) / 3600 : 0;
+            totalHours = billableHours + unbillableHours;
+        }
         
         res.json({
             success: true,
             project: project,
             time_summary: {
-                billable_hours: project.billable_seconds ? (project.billable_seconds / 3600).toFixed(2) : '0.00',
-                unbillable_hours: project.unbillable_seconds ? (project.unbillable_seconds / 3600).toFixed(2) : '0.00',
-                total_hours: project.billable_seconds && project.unbillable_seconds 
-                    ? ((project.billable_seconds + project.unbillable_seconds) / 3600).toFixed(2) 
-                    : '0.00',
-                allocation_details: allocation
+                billable_hours: billableHours.toFixed(2),
+                unbillable_hours: unbillableHours.toFixed(2),
+                total_hours: totalHours.toFixed(2),
+                allocation_details: {
+                    billable: allocation?.billable || 0,
+                    nonbillable: allocation?.nonbillable || 0,
+                    logged: allocation?.logged || 0,
+                    charged: allocation?.charged || 0
+                }
             }
         });
         
@@ -451,8 +466,8 @@ app.get('/api/chat/agreement/:id', async (req, res) => {
         // Get agreement details
         const agreementUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/contracts/${agreementId}?_fields=id,title,description,status,standing,against,date_started,date_expires,retainer_type,retainer_value,custom_fields`;
         
-        // Get current period
-        const periodsUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/contracts/${agreementId}/periods?_limit=1&_order_by=date_commenced&_order_by_desc=1`;
+        // Get recent periods (need multiple to find current one)
+        const periodsUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/contracts/${agreementId}/periods?_fields=id,date_commenced,date_expires,allowance,budget_used,standing&_limit=10&_order_by=date_commenced&_order_by_desc=1`;
         
         const [agreementResponse, periodsResponse] = await Promise.all([
             makeAcceloRequest(agreementUrl, apiSettings.accessToken),
@@ -460,22 +475,71 @@ app.get('/api/chat/agreement/:id', async (req, res) => {
         ]);
         
         const agreement = agreementResponse.response;
-        const currentPeriod = periodsResponse.response && periodsResponse.response[0];
+        const periodsData = periodsResponse.response;
+        const periods = periodsData?.periods || [];
+        
+        // Find the current period (the one with standing "opened")
+        let currentPeriod = null;
+        
+        // First, look for an "opened" period
+        for (const period of periods) {
+            if (period.standing === 'opened') {
+                currentPeriod = period;
+                break;
+            }
+        }
+        
+        // If no opened period found, look for one that contains today's date
+        if (!currentPeriod) {
+            const now = Math.floor(Date.now() / 1000);
+            for (const period of periods) {
+                const startDate = parseInt(period.date_commenced);
+                const endDate = parseInt(period.date_expires);
+                
+                if (now >= startDate && now <= endDate) {
+                    currentPeriod = period;
+                    break;
+                }
+            }
+        }
+        
+        // If still no current period found, use the most recent one
+        if (!currentPeriod && periods.length > 0) {
+            currentPeriod = periods[0];
+        }
         
         let usage_summary = null;
-        if (currentPeriod && currentPeriod.contract_budget) {
-            const budget = currentPeriod.contract_budget;
+        if (currentPeriod) {
+            // The API returns different structures - handle both
+            let timeAllowance = 0;
+            let timeUsed = 0;
+            let timeRemaining = 0;
+            
+            if (currentPeriod.allowance && currentPeriod.allowance.billable) {
+                timeAllowance = parseFloat(currentPeriod.allowance.billable) / 3600;
+            }
+            
+            if (currentPeriod.budget_used && currentPeriod.budget_used.value) {
+                timeUsed = parseFloat(currentPeriod.budget_used.value) / 3600;
+            }
+            
+            timeRemaining = timeAllowance - timeUsed;
+            
+            const periodStart = new Date(parseInt(currentPeriod.date_commenced) * 1000).toISOString().split('T')[0];
+            const periodEnd = new Date(parseInt(currentPeriod.date_expires) * 1000).toISOString().split('T')[0];
+            
             usage_summary = {
-                time_allowance_hours: budget.time ? (budget.time / 3600).toFixed(2) : '0.00',
-                time_used_hours: budget.time_used ? (budget.time_used / 3600).toFixed(2) : '0.00',
-                time_remaining_hours: budget.time_remaining ? (budget.time_remaining / 3600).toFixed(2) : '0.00',
-                usage_percentage: budget.time && budget.time_used 
-                    ? ((budget.time_used / budget.time) * 100).toFixed(1) + '%'
+                time_allowance_hours: timeAllowance.toFixed(2),
+                time_used_hours: timeUsed.toFixed(2),
+                time_remaining_hours: timeRemaining.toFixed(2),
+                usage_percentage: timeAllowance > 0 
+                    ? ((timeUsed / timeAllowance) * 100).toFixed(1) + '%'
                     : '0.0%',
-                value_budget: budget.value || 0,
-                value_used: budget.value_used || 0,
-                period_start: new Date(currentPeriod.date_commenced * 1000).toISOString().split('T')[0],
-                period_end: new Date(currentPeriod.date_expires * 1000).toISOString().split('T')[0]
+                value_budget: 0, // Could be calculated from rate if needed
+                value_used: 0,
+                period_start: periodStart,
+                period_end: periodEnd,
+                period_id: currentPeriod.id
             };
         }
         
@@ -493,6 +557,55 @@ app.get('/api/chat/agreement/:id', async (req, res) => {
             message: error.message,
             agreement_id: req.params.id,
             action: 'Verify the agreement ID exists and try again'
+        });
+    }
+});
+
+// Debug endpoint for testing agreement periods
+app.get('/api/chat/debug/agreement/:id/periods', async (req, res) => {
+    if (!apiSettings || !apiSettings.accessToken) {
+        return res.status(400).json({
+            error: 'No API credentials configured'
+        });
+    }
+
+    try {
+        const agreementId = req.params.id;
+        const periodsUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/contracts/${agreementId}/periods?_fields=id,date_commenced,date_expires,allowance,budget_used,standing&_limit=10&_order_by=date_commenced&_order_by_desc=1`;
+        
+        const periodsResponse = await makeAcceloRequest(periodsUrl, apiSettings.accessToken);
+        const periodsData = periodsResponse.response;
+        const periods = periodsData?.periods || [];
+        
+        // Find opened period
+        let currentPeriod = null;
+        for (const period of periods) {
+            if (period.standing === 'opened') {
+                currentPeriod = period;
+                break;
+            }
+        }
+        
+        let result = { periods, currentPeriod };
+        
+        if (currentPeriod) {
+            const timeAllowance = currentPeriod.allowance?.billable ? parseFloat(currentPeriod.allowance.billable) / 3600 : 0;
+            const timeUsed = currentPeriod.budget_used?.value ? parseFloat(currentPeriod.budget_used.value) / 3600 : 0;
+            
+            result.calculation = {
+                timeAllowance,
+                timeUsed,
+                timeAllowanceFormatted: `${Math.floor(timeAllowance)}h ${Math.round((timeAllowance % 1) * 60)}m`,
+                timeUsedFormatted: `${Math.floor(timeUsed)}h ${Math.round((timeUsed % 1) * 60)}m`
+            };
+        }
+        
+        res.json({ success: true, data: result });
+        
+    } catch (error) {
+        res.status(500).json({
+            error: 'Debug test failed',
+            message: error.message
         });
     }
 });
