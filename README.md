@@ -21,10 +21,13 @@ A comprehensive dashboard application for Accelo that displays companies, projec
 
 ## Features
 
-- **Company Overview**: View all your companies in a clean sidebar interface
-- **Project Tracking**: Monitor project hours (billable and non-billable)
-- **Agreement Management**: Track agreement usage and allowances
-- **Search & Add**: Easily search and add companies to your dashboard
+- **Company-Grouped Layout**: Organized view with company blocks on the left and their related progress items on the right
+- **Compact Progress Tracking**: View up to 10+ projects and agreements on screen simultaneously
+- **Project Tracking**: Monitor project hours (billable and non-billable) with visual progress bars
+- **Agreement Management**: Track agreement usage and allowances with percentage indicators
+- **Intelligent Type Detection**: Automatically identifies projects vs agreements with correct icons and labels
+- **Search & Add**: Easily search and add companies, projects, and agreements to your dashboard
+- **Full-Width Layout**: Progress blocks stretch across available width for optimal space utilization
 - **Secure Authentication**: Service Application OAuth 2.0 with 30-day tokens
 - **Real-time Updates**: Automatic data refresh with caching
 - **Responsive Design**: Works on desktop and tablet devices
@@ -32,9 +35,11 @@ A comprehensive dashboard application for Accelo that displays companies, projec
 ## Screenshots
 
 ### Main Dashboard
-- Companies listed in sidebar
-- Progress tracker blocks for projects and agreements
-- Visual indicators for usage levels
+- Company-grouped layout with company blocks on the left
+- Compact progress blocks stretching full-width on the right
+- Height-matched company blocks that adjust to their content
+- Visual progress bars and percentage indicators
+- Proper project (📋) and agreement (📄) type identification
 
 ### Settings Page
 - Secure API credential configuration
@@ -173,44 +178,53 @@ When a user clicks on a company:
 
 ### Dashboard Overview
 
-The dashboard has three main areas:
-1. **Navigation Bar**: Title, Add Item button, Settings link
-2. **Company Sidebar**: List of added companies with item counts
-3. **Main Content**: Progress blocks for selected company
+The dashboard features a company-grouped layout with two main areas:
+1. **Navigation Bar**: Dashboard title, Add Item button, Settings link
+2. **Company-Grouped Content Area**: 
+   - **Left**: Company blocks (fixed 120px width, height adjusts to content)
+   - **Right**: Full-width progress blocks for projects and agreements
+   - **Layout**: All items displayed simultaneously, no selection required
 
-### Adding Companies to Dashboard
+### Adding Items to Dashboard
 
 1. Click the "Add Item" button in the navigation bar
-2. Search for companies by name (minimum 2 characters)
-3. Click to select companies (they'll highlight)
+2. **Step 1**: Search and select companies by name (minimum 2 characters)
+3. **Step 2**: Choose specific projects and agreements from selected companies
 4. Click "Add Selected Items"
-5. Companies appear in the sidebar
+5. Items appear grouped by company in the main content area
 
-### Viewing Company Data
+### Viewing Dashboard Data
 
-1. Click any company in the sidebar (it highlights)
-2. Main area shows all active projects and agreements
-3. Each block displays key metrics and progress
-4. Data refreshes automatically when switching companies
+1. All added projects and agreements are visible simultaneously
+2. Items are organized in rows by company (company block + progress blocks)
+3. Company blocks on the left adjust height to match their content
+4. Progress blocks show compact, essential information in a single row
+5. No company selection required - everything is always visible
 
 ### Understanding Progress Blocks
 
-**Project Blocks** (📁 icon) display:
-- Project title and status
-- Total logged hours
-- Billable hours (revenue-generating)
-- Non-billable hours (internal time)
-- Due date (if set)
+All progress blocks use a **compact, single-row layout** showing:
+- Icon (📋 for projects, 📄 for agreements) + Title + Type label
+- Hours display: "XXh XXm / XXh XXm" format 
+- Percentage indicator (large, bold)
+- Visual progress bar (200px width)
+- Remove button (appears on hover)
 
-**Agreement Blocks** (📋 icon) display:
-- Agreement title and type
-- Current period dates
-- Hours used vs. allowance
-- Visual progress bar:
-  - 🟢 Green: Under 75% usage
-  - 🟡 Yellow: 75-90% usage (warning)
-  - 🔴 Red: Over 90% usage (critical)
-- Percentage of allowance consumed
+**Project Blocks** (📋 icon):
+- Display logged hours vs. total/budget hours
+- Type label: "PROJECT"
+- Automatic detection based on project-specific fields
+
+**Agreement Blocks** (📄 icon):
+- Display used hours vs. allowance hours
+- Type label: "AGREEMENT" 
+- Automatic detection based on contract-specific fields
+
+**Layout Features**:
+- Designed to fit 10+ items on screen simultaneously
+- Full-width blocks that stretch across available space
+- Company names not shown (grouped by company block on left)
+- Minimal height for maximum density
 
 ### Search Functionality
 
@@ -606,6 +620,37 @@ Check terminal for:
 2. **No Drag & Drop**: Cannot reorder companies
 3. **No Filtering**: Cannot filter projects by status
 4. **Fixed Metrics**: Cannot customize displayed data
+
+## Recent Updates
+
+### Dashboard Layout Redesign (v2.0)
+
+**Major Changes**:
+- **New Layout**: Replaced sidebar + main content with company-grouped rows
+- **Compact Design**: Progress blocks now fit 10+ items on screen
+- **Full-Width Blocks**: Items stretch across available width
+- **Height-Matched Companies**: Company blocks adjust to match their content height
+- **Improved Type Detection**: Enhanced logic to properly identify projects vs agreements
+- **Single-Row Format**: All essential information displayed horizontally
+
+**Visual Improvements**:
+- Proper icons: 📋 for projects, 📄 for agreements
+- Consistent "XXh XXm / XXh XXm" hours formatting
+- Large percentage indicators for quick scanning
+- Remove company names from blocks (shown in company grouping instead)
+- 200px progress bars with gradient styling
+
+**User Experience**:
+- No company selection required - everything visible at once
+- Optimized for viewing many items simultaneously
+- Better use of screen real estate
+- Cleaner, more professional appearance
+
+**Technical Changes**:
+- Enhanced type detection with explicit type setting
+- Improved data flow with proper type assignment
+- New CSS architecture for company-grouped layout
+- Better responsive design for different screen sizes
 
 ## Roadmap
 
