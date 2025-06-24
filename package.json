@@ -1,0 +1,22 @@
+{
+  "name": "accelo-api-app",
+  "version": "1.0.0",
+  "description": "Comprehensive Accelo API Integration Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "accelo",
+    "api",
+    "dashboard",
+    "project-management"
+  ],
+  "author": "D. Fraser",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2"
+  }
+}
