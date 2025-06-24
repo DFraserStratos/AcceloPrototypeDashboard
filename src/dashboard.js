@@ -235,7 +235,7 @@ class Dashboard {
         if (!companies) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-state-icon">🏢</div>
+                    <div class="empty-state-icon"><i class="fa-solid fa-building"></i></div>
                     <div class="empty-state-title">Search for Companies</div>
                     <div class="empty-state-description">
                         Type to search for companies in your Accelo account.
@@ -248,7 +248,7 @@ class Dashboard {
         if (companies.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-state-icon">🤷</div>
+                    <div class="empty-state-icon"><i class="fa-solid fa-circle-question"></i></div>
                     <div class="empty-state-title">No Companies Found</div>
                     <div class="empty-state-description">
                         Try a different search term or check your spelling.
@@ -327,7 +327,7 @@ class Dashboard {
         if (this.availableItems.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-state-icon">📋</div>
+                    <div class="empty-state-icon"><i class="fa-solid fa-clipboard"></i></div>
                     <div class="empty-state-title">No Items Found</div>
                     <div class="empty-state-description">
                         The selected companies have no active projects or agreements.
@@ -379,7 +379,7 @@ class Dashboard {
         div.dataset.id = item.id;
         div.dataset.type = type;
         
-        const icon = type === 'project' ? '📁' : '📋';
+        const icon = type === 'project' ? '<i class="fa-solid fa-folder"></i>' : '<i class="fa-solid fa-clipboard"></i>';
         const title = item.title || item.name;
         
         div.innerHTML = `
@@ -542,7 +542,7 @@ class Dashboard {
         if (this.dashboardData.length === 0) {
             contentGrid.innerHTML = `
                 <div class="dashboard-welcome">
-                    <div class="welcome-icon">📊</div>
+                    <div class="welcome-icon"><i class="fa-solid fa-chart-bar"></i></div>
                     <h2>Welcome to your Accelo Dashboard</h2>
                     <p>Start by adding companies, projects, and agreements to track your progress.</p>
                     <button class="btn btn-primary btn-lg" onclick="dashboard.showAddItemModal()">
@@ -630,7 +630,7 @@ class Dashboard {
             }
         }
         
-        const icon = isProject ? '📋' : '📄';
+        const icon = isProject ? '<i class="fa-solid fa-clipboard"></i>' : '<i class="fa-solid fa-file-lines"></i>';
         const title = item.title || item.name || `${type} #${item.id}`;
         
         // Calculate hours and percentage

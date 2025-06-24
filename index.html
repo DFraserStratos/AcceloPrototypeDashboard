@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Accelo Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/styles/main.css">
     <link rel="stylesheet" href="/styles/dashboard.css">
 </head>
@@ -17,7 +18,7 @@
                 Add Item
             </button>
             <a href="/settings" class="btn btn-icon btn-ghost" title="Settings">
-                <span class="icon-settings"></span>
+                <i class="fa-solid fa-gear"></i>
             </a>
         </div>
     </nav>
@@ -32,7 +33,7 @@
             <div id="companyList" class="company-list">
                 <!-- Companies will be loaded here -->
                 <div class="empty-state">
-                    <div class="empty-state-icon">🏢</div>
+                    <div class="empty-state-icon"><i class="fa-solid fa-building"></i></div>
                     <div class="empty-state-title">No Companies Added</div>
                     <div class="empty-state-description">
                         Click "Add Item" to search and add companies to your dashboard.
@@ -81,7 +82,7 @@
                 <div id="searchResults" class="search-results">
                     <!-- Search results will appear here -->
                     <div class="empty-state">
-                        <div class="empty-state-icon">🔍</div>
+                        <div class="empty-state-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
                         <div class="empty-state-title">Start Searching</div>
                         <div class="empty-state-description">
                             Type to search for companies, projects, or agreements in your Accelo account.

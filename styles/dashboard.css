@@ -153,6 +153,10 @@
     font-size: 1rem;
     width: 20px;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
 }
 
 .compact-block-title {
@@ -264,6 +268,10 @@
 .welcome-icon {
     font-size: 4rem;
     margin-bottom: var(--spacing-lg);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dashboard-welcome h2 {
@@ -573,6 +581,10 @@
     font-size: 3rem;
     margin-bottom: var(--spacing-md);
     opacity: 0.5;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .empty-state-title {
