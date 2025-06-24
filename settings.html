@@ -158,6 +158,49 @@
             font-family: monospace;
             font-size: 13px;
         }
+        
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 3px;
+        }
+        
+        .log-entry-item {
+            margin-bottom: 8px;
+            padding: 6px;
+            border-left: 3px solid #dee2e6;
+            background-color: #f8f9fa;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        
+        .log-entry-item.request { border-left-color: #007bff; }
+        .log-entry-item.response { border-left-color: #28a745; }
+        .log-entry-item.error { border-left-color: #dc3545; background-color: #fff5f5; }
+        .log-entry-item.info { border-left-color: #17a2b8; }
+        
+        .log-entry-header {
+            font-weight: bold;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .log-entry-time {
+            font-size: 10px;
+            color: #6c757d;
+            font-weight: normal;
+        }
+        
+        .log-entry-details {
+            margin-top: 4px;
+            padding: 4px;
+            background-color: rgba(0,0,0,0.05);
+            border-radius: 2px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
@@ -229,9 +272,19 @@
         <div class="debug-section">
             <div class="debug-toggle" onclick="toggleDebugLog()">
                 <span id="debugToggleIcon">▶</span>
-                Debug Log
+                API Debug Log
             </div>
-            <div id="debugLog" class="debug-log"></div>
+            <div id="debugLog" class="debug-log">
+                <div class="log-controls" style="margin-bottom: 12px; display: flex; gap: 8px;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="refreshLogs()">Refresh</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="clearLogs()">Clear Log</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="copyLogs()">Copy to Clipboard</button>
+                    <span id="logStatus" class="text-small" style="margin-left: auto; align-self: center; color: #6c757d;"></span>
+                </div>
+                <div id="logEntries" style="max-height: 350px; overflow-y: auto; border: 1px solid #dee2e6; padding: 8px; background: white; border-radius: 4px;">
+                    <div class="text-muted text-center">Click Refresh to load logs</div>
+                </div>
+            </div>
         </div>
     </div>
 

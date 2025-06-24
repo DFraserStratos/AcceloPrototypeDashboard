@@ -52,17 +52,75 @@ app.all('/api/proxy', (req, res) => {
         headers: {}
     };
     
-    // Forward relevant headers
+    // Forward relevant headers (case-insensitive)
     const headersToForward = ['authorization', 'content-type', 'accept'];
     headersToForward.forEach(header => {
-        if (req.headers[header]) {
-            options.headers[header] = req.headers[header];
+        // Find the header in a case-insensitive way
+        const headerKey = Object.keys(req.headers).find(key => 
+            key.toLowerCase() === header.toLowerCase()
+        );
+        if (headerKey && req.headers[headerKey]) {
+            options.headers[header] = req.headers[headerKey];
         }
     });
     
-    console.log(`[PROXY] ${req.method} ${targetUrl}`);
+    // Enhanced logging
+    addLog('request', `${req.method} ${targetUrl}`, {
+        method: req.method,
+        url: targetUrl,
+        headers: {
+            authorization: req.headers.authorization ? `Bearer ${req.headers.authorization.slice(-10)}...` : 'None',
+            'content-type': req.headers['content-type'],
+            'user-agent': req.headers['user-agent']
+        },
+        forwardedHeaders: {
+            authorization: options.headers.authorization ? `Bearer ${options.headers.authorization.slice(-10)}...` : 'None',
+            'content-type': options.headers['content-type'],
+            accept: options.headers.accept
+        }
+    });
     
     const proxyReq = https.request(options, (proxyRes) => {
+        const statusCode = proxyRes.statusCode;
+        const statusText = proxyRes.statusMessage;
+        
+        // Log response details
+        addLog('response', `${req.method} ${targetUrl} - ${statusCode} ${statusText}`, {
+            statusCode: statusCode,
+            statusText: statusText,
+            headers: {
+                'content-type': proxyRes.headers['content-type'],
+                'x-ratelimit-remaining': proxyRes.headers['x-ratelimit-remaining'],
+                'x-ratelimit-limit': proxyRes.headers['x-ratelimit-limit'],
+                'x-status-reason': proxyRes.headers['x-status-reason']
+            }
+        });
+        
+        // Log errors
+        if (statusCode >= 400) {
+            let errorBody = '';
+            proxyRes.on('data', chunk => {
+                errorBody += chunk.toString();
+            });
+            proxyRes.on('end', () => {
+                try {
+                    const errorData = JSON.parse(errorBody);
+                    addLog('error', `API Error: ${statusCode} - ${errorData.meta?.message || statusText}`, {
+                        statusCode: statusCode,
+                        url: targetUrl,
+                        errorMessage: errorData.meta?.message,
+                        errorStatus: errorData.meta?.status,
+                        moreInfo: errorData.meta?.more_info
+                    });
+                } catch (e) {
+                    addLog('error', `API Error: ${statusCode} - ${statusText}`, {
+                        statusCode: statusCode,
+                        url: targetUrl,
+                        rawError: errorBody
+                    });
+                }
+            });
+        }
         res.status(proxyRes.statusCode);
         
         // Forward response headers
@@ -74,7 +132,11 @@ app.all('/api/proxy', (req, res) => {
     });
     
     proxyReq.on('error', (error) => {
-        console.error('[PROXY ERROR]', error);
+        addLog('error', `Proxy Error: ${error.message}`, {
+            error: error.message,
+            code: error.code,
+            url: targetUrl
+        });
         res.status(500).json({ error: 'Proxy error: ' + error.message });
     });
     
@@ -93,6 +155,33 @@ app.all('/api/proxy', (req, res) => {
 // API endpoint to store/retrieve settings (in memory for now)
 let apiSettings = null;
 
+// Logging system
+let apiLogs = [];
+const MAX_LOGS = 100;
+
+function addLog(type, message, details = null) {
+    const logEntry = {
+        timestamp: new Date().toISOString(),
+        type: type, // 'info', 'error', 'request', 'response'
+        message: message,
+        details: details
+    };
+    
+    apiLogs.unshift(logEntry);
+    
+    // Keep only the last MAX_LOGS entries
+    if (apiLogs.length > MAX_LOGS) {
+        apiLogs = apiLogs.slice(0, MAX_LOGS);
+    }
+    
+    // Also log to console
+    const timestamp = new Date().toLocaleTimeString();
+    console.log(`[${timestamp}] [${type.toUpperCase()}] ${message}`);
+    if (details) {
+        console.log(`[${timestamp}] Details:`, details);
+    }
+}
+
 app.get('/api/settings', (req, res) => {
     if (apiSettings) {
         res.json(apiSettings);
@@ -103,7 +192,28 @@ app.get('/api/settings', (req, res) => {
 
 app.post('/api/settings', (req, res) => {
     apiSettings = req.body;
-    console.log('[SETTINGS] Updated API settings');
+    addLog('info', 'API settings updated', {
+        deployment: req.body.deployment,
+        userName: req.body.userName,
+        userEmail: req.body.userEmail,
+        tokenExpiry: req.body.tokenExpiry
+    });
+    res.json({ success: true });
+});
+
+// API endpoint to get logs
+app.get('/api/logs', (req, res) => {
+    res.json({
+        logs: apiLogs,
+        count: apiLogs.length,
+        maxLogs: MAX_LOGS
+    });
+});
+
+// API endpoint to clear logs
+app.post('/api/logs/clear', (req, res) => {
+    apiLogs = [];
+    addLog('info', 'API logs cleared');
     res.json({ success: true });
 });
 
@@ -112,4 +222,10 @@ app.listen(PORT, () => {
     console.log(`Accelo API Dashboard running at http://localhost:${PORT}`);
     console.log(`Settings page at http://localhost:${PORT}/settings`);
     console.log('Press Ctrl+C to stop the server');
+    
+    addLog('info', `Server started on port ${PORT}`, {
+        port: PORT,
+        dashboardUrl: `http://localhost:${PORT}`,
+        settingsUrl: `http://localhost:${PORT}/settings`
+    });
 });

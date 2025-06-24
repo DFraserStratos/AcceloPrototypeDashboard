@@ -299,43 +299,122 @@ function showAlert(message, type = 'info') {
 
 // Toggle debug log visibility
 function toggleDebugLog() {
-    const debugLog = document.getElementById('debugLog');
+    const log = document.getElementById('debugLog');
     const icon = document.getElementById('debugToggleIcon');
     
-    if (debugLog.classList.contains('show')) {
-        debugLog.classList.remove('show');
+    if (log.classList.contains('show')) {
+        log.classList.remove('show');
         icon.textContent = '▶';
     } else {
-        debugLog.classList.add('show');
+        log.classList.add('show');
         icon.textContent = '▼';
-        updateDebugDisplay();
+        refreshLogs();
     }
 }
 
-// Add log entry
+async function refreshLogs() {
+    try {
+        const response = await fetch('/api/logs');
+        const data = await response.json();
+        
+        updateLogDisplay(data.logs);
+        updateLogStatus(`${data.count} entries (max ${data.maxLogs})`);
+    } catch (error) {
+        updateLogStatus('Error loading logs');
+        console.error('Failed to load logs:', error);
+    }
+}
+
+async function clearLogs() {
+    if (!confirm('Are you sure you want to clear all logs?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/logs/clear', { method: 'POST' });
+        if (response.ok) {
+            updateLogDisplay([]);
+            updateLogStatus('Logs cleared');
+            showAlert('Logs cleared successfully', 'info');
+        } else {
+            throw new Error('Failed to clear logs');
+        }
+    } catch (error) {
+        showAlert('Failed to clear logs: ' + error.message, 'error');
+    }
+}
+
+async function copyLogs() {
+    try {
+        const response = await fetch('/api/logs');
+        const data = await response.json();
+        
+        // Format logs for copying
+        const logText = data.logs.map(entry => {
+            const timestamp = new Date(entry.timestamp).toLocaleString();
+            let text = `[${timestamp}] [${entry.type.toUpperCase()}] ${entry.message}`;
+            
+            if (entry.details) {
+                text += '\n' + JSON.stringify(entry.details, null, 2);
+            }
+            
+            return text;
+        }).join('\n\n');
+        
+        await navigator.clipboard.writeText(logText);
+        showAlert('Logs copied to clipboard', 'success');
+        updateLogStatus('Copied to clipboard');
+    } catch (error) {
+        showAlert('Failed to copy logs: ' + error.message, 'error');
+    }
+}
+
+function updateLogDisplay(logs) {
+    const container = document.getElementById('logEntries');
+    
+    if (!logs || logs.length === 0) {
+        container.innerHTML = '<div class="text-muted text-center">No logs available</div>';
+        return;
+    }
+    
+    container.innerHTML = logs.map(entry => {
+        const timestamp = new Date(entry.timestamp).toLocaleString();
+        const hasDetails = entry.details && Object.keys(entry.details).length > 0;
+        
+        return `
+            <div class="log-entry-item ${entry.type}">
+                <div class="log-entry-header">
+                    <span>${entry.message}</span>
+                    <span class="log-entry-time">${timestamp}</span>
+                </div>
+                ${hasDetails ? `
+                    <div class="log-entry-details">${JSON.stringify(entry.details, null, 2)}</div>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+    
+    // Scroll to top to show newest entries first
+    container.scrollTop = 0;
+}
+
+function updateLogStatus(message) {
+    const status = document.getElementById('logStatus');
+    if (status) {
+        status.textContent = message;
+    }
+}
+
+// Add log entry (legacy function for backward compatibility)
 function log(message, level = 'info') {
     const timestamp = new Date().toLocaleTimeString();
     debugLogs.push({ timestamp, level, message });
     
     console.log(`[${level.toUpperCase()}] ${message}`);
     
-    if (document.getElementById('debugLog').classList.contains('show')) {
-        updateDebugDisplay();
+    // Auto-refresh if debug log is visible
+    const debugDiv = document.getElementById('debugLog');
+    if (debugDiv && debugDiv.classList.contains('show')) {
+        setTimeout(refreshLogs, 100);
     }
-}
-
-// Update debug display
-function updateDebugDisplay() {
-    const debugLog = document.getElementById('debugLog');
-    
-    debugLog.innerHTML = debugLogs.map(entry => `
-        <div class="log-entry">
-            <span class="log-time">${entry.timestamp}</span>
-            <span class="log-level ${entry.level}">${entry.level.toUpperCase()}</span>
-            <span>${entry.message}</span>
-        </div>
-    `).join('');
-    
-    // Scroll to bottom
-    debugLog.scrollTop = debugLog.scrollHeight;
 }
