@@ -1806,11 +1806,37 @@ class Dashboard {
         const icon = isProject ? '<i class="fa-solid fa-diagram-project"></i>' : '<i class="fa-solid fa-file-contract"></i>';
         const title = item.title || item.name || `${type} #${item.id}`;
         
+        // Determine agreement budget type and create appropriate type label
+        let typeLabel = 'PROJECT';
+        let budgetType = null;
+        let showProgressBar = true;
+        
+        if (!isProject) {
+            budgetType = item.usage?.budgetType || 'none';
+            switch (budgetType) {
+                case 'time':
+                    typeLabel = 'AGREEMENT | TIME BUDGET';
+                    break;
+                case 'value':
+                    typeLabel = 'AGREEMENT | VALUE BUDGET';
+                    break;
+                case 'none':
+                default:
+                    typeLabel = 'AGREEMENT';
+                    showProgressBar = false;
+                    break;
+            }
+        }
+        
         // Calculate hours and percentage
         let loggedHours = 0;
         let totalHours = 0;
         let percentage = 0;
         let isBudgetSuspicious = false;
+        let displayValue = '';
+        let remainingValue = '';
+        let progressStatus = 'success';
+        let statusClass = '';
         
         if (isProject && item.hours) {
             loggedHours = (item.hours.billableHours || 0) + (item.hours.nonBillableHours || 0);
@@ -1822,13 +1848,32 @@ class Dashboard {
             // Check if budget seems suspicious (likely calculated fallback)
             isBudgetSuspicious = this.isProjectBudgetSuspicious(item.id, item.title, loggedHours, totalHours);
         } else if (!isProject && item.usage) {
-            loggedHours = item.usage.timeUsed || 0;
-            totalHours = item.usage.timeAllowance || 0;
-            percentage = totalHours > 0 ? (loggedHours / totalHours) * 100 : 0;
+            if (budgetType === 'time') {
+                // Time budget agreement
+                loggedHours = item.usage.timeUsed || 0;
+                totalHours = item.usage.timeAllowance || 0;
+                percentage = totalHours > 0 ? (loggedHours / totalHours) * 100 : 0;
+            } else if (budgetType === 'value') {
+                // Value budget agreement
+                const loggedValue = item.usage.valueUsed || 0;
+                const totalValue = item.usage.valueAllowance || 0;
+                percentage = totalValue > 0 ? (loggedValue / totalValue) * 100 : 0;
+                
+                // For value budgets, show monetary amounts
+                displayValue = `$${loggedValue.toFixed(2)} / $${totalValue.toFixed(2)}`;
+                const remainingAmount = Math.max(0, totalValue - loggedValue);
+                remainingValue = `$${remainingAmount.toFixed(2)} remaining`;
+            } else {
+                // No budget agreement - just show time worked
+                loggedHours = item.usage.timeUsed || 0;
+                totalHours = 0; // No budget to compare against
+                percentage = 0;
+                showProgressBar = false;
+            }
         }
         
-        // If no hours data, use default
-        if (totalHours === 0 && loggedHours === 0) {
+        // If no hours data, use default for projects
+        if (isProject && totalHours === 0 && loggedHours === 0) {
             totalHours = 100;
             loggedHours = 0;
             percentage = 0;
@@ -1844,22 +1889,21 @@ class Dashboard {
         // Calculate remaining hours
         const remainingHours = Math.max(0, totalHours - loggedHours);
         
-        // Determine progress status and colors
-        let progressStatus = 'success'; // default green
-        let statusClass = '';
-        
-        if (percentage > 100) {
-            // Over budget - Red
-            progressStatus = 'danger';
-            statusClass = 'status-danger';
-        } else if (percentage >= 75) {
-            // Approaching limit - Yellow
-            progressStatus = 'warning';
-            statusClass = 'status-warning';
-        } else {
-            // On track - Green
-            progressStatus = 'success';
-            statusClass = 'status-success';
+        // Determine progress status and colors (only for budgeted items)
+        if (showProgressBar && percentage > 0) {
+            if (percentage > 100) {
+                // Over budget - Red
+                progressStatus = 'danger';
+                statusClass = 'status-danger';
+            } else if (percentage >= 75) {
+                // Approaching limit - Yellow
+                progressStatus = 'warning';
+                statusClass = 'status-warning';
+            } else {
+                // On track - Green
+                progressStatus = 'success';
+                statusClass = 'status-success';
+            }
         }
         
         // Format period dates for agreements
@@ -1903,45 +1947,126 @@ class Dashboard {
         // Create Accelo URL for the item
         const acceloUrl = this.createAcceloUrl(item.id, type);
         
-        block.innerHTML = `
-            <div class="compact-block-content">
-                <div class="compact-block-left">
-                    <div class="compact-block-header">
-                        <div class="compact-block-icon">${icon}</div>
-                        <div class="compact-block-title-section">
-                            <a href="${acceloUrl}" target="_blank" class="compact-block-title compact-block-title-link" title="Open in Accelo">
-                                ${UIComponents.escapeHtml(title)}
-                            </a>
+        // Build the content based on budget type
+        let contentHtml;
+        
+        if (!isProject && budgetType === 'none') {
+            // No-budget agreement: show time worked with grayed-out progress bar for alignment
+            contentHtml = `
+                <div class="compact-block-content">
+                    <div class="compact-block-left">
+                        <div class="compact-block-header">
+                            <div class="compact-block-icon">${icon}</div>
+                            <div class="compact-block-title-section">
+                                <a href="${acceloUrl}" target="_blank" class="compact-block-title compact-block-title-link" title="Open in Accelo">
+                                    ${UIComponents.escapeHtml(title)}
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="compact-block-type-section">
-                    <div class="compact-block-type">${type === 'project' ? 'PROJECT' : 'AGREEMENT'}</div>
-                    ${periodInfo}
-                </div>
-                
-                <div class="compact-hours-section">
-                    <div class="compact-hours-display">
-                        <span class="compact-hours-logged">${formatHours(loggedHours)}</span>
-                        <span class="compact-hours-separator">/</span>
-                        <span class="compact-hours-total">${formatHours(totalHours)}</span>
-                        ${isBudgetSuspicious ? '<span class="budget-warning" title="Budget may be estimated. Consider setting actual project budget.">⚠️</span>' : ''}
+                    
+                    <div class="compact-block-type-section">
+                        <div class="compact-block-type">${typeLabel}</div>
+                        ${periodInfo}
                     </div>
-                </div>
-                
-                <div class="compact-percentage ${statusClass}">${Math.round(percentage)}%</div>
-                
-                <div class="compact-progress-bar">
-                    <div class="compact-progress-fill compact-progress-${progressStatus}" style="width: ${Math.min(percentage, 100)}%"></div>
-                </div>
-                
-                <div class="compact-remaining-section">
-                    <div class="compact-remaining-time">${formatHours(remainingHours)}</div>
-                    <div class="compact-remaining-label">Remaining</div>
-                </div>
-            </div>
-            
+                    
+                    <div class="compact-hours-section">
+                        <div class="compact-hours-display">
+                            <span class="compact-hours-logged">${formatHours(loggedHours)}</span>
+                            <span class="compact-hours-separator">/</span>
+                            <span class="compact-hours-total">—</span>
+                        </div>
+                    </div>
+                    
+                    <div class="compact-percentage compact-percentage-disabled">—</div>
+                    
+                    <div class="compact-progress-bar compact-progress-bar-disabled">
+                        <div class="compact-progress-fill compact-progress-disabled" style="width: 0%"></div>
+                    </div>
+                    
+                    <div class="compact-remaining-section">
+                        <div class="compact-remaining-value compact-remaining-disabled">
+                            
+                        </div>
+                    </div>
+                </div>`;
+        } else if (!isProject && budgetType === 'value') {
+            // Value budget agreement: show monetary amounts
+            contentHtml = `
+                <div class="compact-block-content">
+                    <div class="compact-block-left">
+                        <div class="compact-block-header">
+                            <div class="compact-block-icon">${icon}</div>
+                            <div class="compact-block-title-section">
+                                <a href="${acceloUrl}" target="_blank" class="compact-block-title compact-block-title-link" title="Open in Accelo">
+                                    ${UIComponents.escapeHtml(title)}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="compact-block-type-section">
+                        <div class="compact-block-type">${typeLabel}</div>
+                        ${periodInfo}
+                    </div>
+                    
+                    <div class="compact-value-section">
+                        <div class="compact-value-display">${displayValue}</div>
+                    </div>
+                    
+                    <div class="compact-percentage ${statusClass}">${Math.round(percentage)}%</div>
+                    
+                    <div class="compact-progress-bar">
+                        <div class="compact-progress-fill compact-progress-${progressStatus}" style="width: ${Math.min(percentage, 100)}%"></div>
+                    </div>
+                    
+                    <div class="compact-remaining-section">
+                        <div class="compact-remaining-value">${remainingValue}</div>
+                    </div>
+                </div>`;
+        } else {
+            // Time budget agreement or project: show hours with progress bar
+            contentHtml = `
+                <div class="compact-block-content">
+                    <div class="compact-block-left">
+                        <div class="compact-block-header">
+                            <div class="compact-block-icon">${icon}</div>
+                            <div class="compact-block-title-section">
+                                <a href="${acceloUrl}" target="_blank" class="compact-block-title compact-block-title-link" title="Open in Accelo">
+                                    ${UIComponents.escapeHtml(title)}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="compact-block-type-section">
+                        <div class="compact-block-type">${typeLabel}</div>
+                        ${periodInfo}
+                    </div>
+                    
+                    <div class="compact-hours-section">
+                        <div class="compact-hours-display">
+                            <span class="compact-hours-logged">${formatHours(loggedHours)}</span>
+                            <span class="compact-hours-separator">/</span>
+                            <span class="compact-hours-total">${formatHours(totalHours)}</span>
+                            ${isBudgetSuspicious ? '<span class="budget-warning" title="Budget may be estimated. Consider setting actual project budget.">⚠️</span>' : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="compact-percentage ${statusClass}">${Math.round(percentage)}%</div>
+                    
+                    <div class="compact-progress-bar">
+                        <div class="compact-progress-fill compact-progress-${progressStatus}" style="width: ${Math.min(percentage, 100)}%"></div>
+                    </div>
+                    
+                    <div class="compact-remaining-section">
+                        <div class="compact-remaining-time">${formatHours(remainingHours)}</div>
+                        <div class="compact-remaining-label">Remaining</div>
+                    </div>
+                </div>`;
+        }
+        
+        block.innerHTML = contentHtml + `
             <button class="btn btn-icon btn-ghost compact-remove-btn" 
                     onclick="event.stopPropagation(); dashboard.confirmRemoveItem('${type}', ${item.id})" 
                     title="Remove from dashboard">

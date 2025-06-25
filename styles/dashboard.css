@@ -1369,3 +1369,52 @@ body.dragging {
         touch-action: none; /* Enable touch dragging */
     }
 }
+
+
+
+/* Compact Value Section (for value-budget agreements) */
+.compact-value-section {
+    display: flex;
+    align-items: center;
+    width: 130px;
+    flex-shrink: 0;
+}
+
+.compact-value-display {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.compact-remaining-value {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    text-align: center;
+    width: 100%;
+    white-space: nowrap;
+}
+
+/* Disabled/Grayed-out styles for no-budget agreements */
+.compact-percentage-disabled {
+    color: var(--text-muted) !important;
+    opacity: 0.5;
+}
+
+.compact-progress-bar-disabled {
+    opacity: 0.3;
+}
+
+.compact-progress-bar-disabled .compact-progress-fill {
+    background-color: var(--border-color) !important;
+}
+
+.compact-progress-disabled {
+    background-color: var(--border-color) !important;
+}
+
+.compact-remaining-disabled {
+    color: var(--text-muted) !important;
+    font-style: italic;
+    opacity: 0.7;
+}

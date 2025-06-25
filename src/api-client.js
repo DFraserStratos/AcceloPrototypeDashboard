@@ -354,7 +354,7 @@ class AcceloAPI {
         try {
             const params = new URLSearchParams({
                 _fields: 'id,date_commenced,date_expires,contract_budget,allowance,budget_used,standing',
-                _limit: 10,
+                _limit: 50,
                 _order_by: 'date_commenced',
                 _order_by_desc: 1
             });
@@ -403,26 +403,55 @@ class AcceloAPI {
                 return null;
             }
             
-            // Handle the actual API structure
+            // Determine the period budget type and handle accordingly
+            let budgetType = 'none'; // 'time', 'value', or 'none'
             let timeAllowance = 0;
             let timeUsed = 0;
+            let valueAllowance = 0;
+            let valueUsed = 0;
             
-            if (currentPeriod.allowance && currentPeriod.allowance.billable) {
+            // Check for time budget - must have meaningful billable allowance
+            if (currentPeriod.allowance && currentPeriod.allowance.billable && parseFloat(currentPeriod.allowance.billable) > 0) {
+                budgetType = 'time';
                 timeAllowance = parseFloat(currentPeriod.allowance.billable) / 3600;
+                
+                if (currentPeriod.budget_used && currentPeriod.budget_used.value) {
+                    timeUsed = parseFloat(currentPeriod.budget_used.value) / 3600;
+                }
             }
-            
-            if (currentPeriod.budget_used && currentPeriod.budget_used.value) {
-                timeUsed = parseFloat(currentPeriod.budget_used.value) / 3600;
+            // Check for value budget - must have meaningful value/amount allowance
+            else if (currentPeriod.allowance && 
+                     ((currentPeriod.allowance.value && parseFloat(currentPeriod.allowance.value) > 0) || 
+                      (currentPeriod.allowance.amount && parseFloat(currentPeriod.allowance.amount) > 0))) {
+                budgetType = 'value';
+                valueAllowance = parseFloat(currentPeriod.allowance.value || currentPeriod.allowance.amount || 0);
+                
+                if (currentPeriod.budget_used && currentPeriod.budget_used.amount) {
+                    valueUsed = parseFloat(currentPeriod.budget_used.amount);
+                }
+            }
+            // For agreements with no budget (Period Budget = "Off"), we still want to track time worked
+            else {
+                budgetType = 'none';
+                // For no-budget agreements, get time worked from budget_used
+                if (currentPeriod.budget_used && currentPeriod.budget_used.value) {
+                    timeUsed = parseFloat(currentPeriod.budget_used.value) / 3600;
+                }
             }
             
             const timeRemaining = timeAllowance - timeUsed;
+            const valueRemaining = valueAllowance - valueUsed;
             
             return {
+                budgetType: budgetType,
                 periodStart: new Date(parseInt(currentPeriod.date_commenced) * 1000).toISOString().split('T')[0],
                 periodEnd: new Date(parseInt(currentPeriod.date_expires) * 1000).toISOString().split('T')[0],
                 timeAllowance: Math.round(timeAllowance * 10) / 10,
                 timeUsed: Math.round(timeUsed * 10) / 10,
-                timeRemaining: Math.round(timeRemaining * 10) / 10
+                timeRemaining: Math.round(timeRemaining * 10) / 10,
+                valueAllowance: Math.round(valueAllowance * 100) / 100,
+                valueUsed: Math.round(valueUsed * 100) / 100,
+                valueRemaining: Math.round(valueRemaining * 100) / 100
             };
         } catch (error) {
             console.error(`Failed to get agreement usage for ${agreementId}:`, error);

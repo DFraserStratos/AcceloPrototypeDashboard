@@ -467,7 +467,7 @@ app.get('/api/chat/agreement/:id', async (req, res) => {
         const agreementUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/contracts/${agreementId}?_fields=id,title,description,status,standing,against,date_started,date_expires,retainer_type,retainer_value,custom_fields`;
         
         // Get recent periods (need multiple to find current one)
-        const periodsUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/contracts/${agreementId}/periods?_fields=id,date_commenced,date_expires,allowance,budget_used,standing&_limit=10&_order_by=date_commenced&_order_by_desc=1`;
+        const periodsUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/contracts/${agreementId}/periods?_fields=id,date_commenced,date_expires,allowance,budget_used,standing&_limit=50&_order_by=date_commenced&_order_by_desc=1`;
         
         const [agreementResponse, periodsResponse] = await Promise.all([
             makeAcceloRequest(agreementUrl, apiSettings.accessToken),
@@ -510,33 +510,60 @@ app.get('/api/chat/agreement/:id', async (req, res) => {
         
         let usage_summary = null;
         if (currentPeriod) {
-            // The API returns different structures - handle both
+            // Determine the period budget type and handle accordingly
+            let budgetType = 'none'; // 'time', 'value', or 'none'
             let timeAllowance = 0;
             let timeUsed = 0;
             let timeRemaining = 0;
+            let valueAllowance = 0;
+            let valueUsed = 0;
             
-            if (currentPeriod.allowance && currentPeriod.allowance.billable) {
+            // Check for time budget - must have meaningful billable allowance
+            if (currentPeriod.allowance && currentPeriod.allowance.billable && parseFloat(currentPeriod.allowance.billable) > 0) {
+                budgetType = 'time';
                 timeAllowance = parseFloat(currentPeriod.allowance.billable) / 3600;
+                
+                if (currentPeriod.budget_used && currentPeriod.budget_used.value) {
+                    timeUsed = parseFloat(currentPeriod.budget_used.value) / 3600;
+                }
             }
-            
-            if (currentPeriod.budget_used && currentPeriod.budget_used.value) {
-                timeUsed = parseFloat(currentPeriod.budget_used.value) / 3600;
+            // Check for value budget - must have meaningful value/amount allowance
+            else if (currentPeriod.allowance && 
+                     ((currentPeriod.allowance.value && parseFloat(currentPeriod.allowance.value) > 0) || 
+                      (currentPeriod.allowance.amount && parseFloat(currentPeriod.allowance.amount) > 0))) {
+                budgetType = 'value';
+                valueAllowance = parseFloat(currentPeriod.allowance.value || currentPeriod.allowance.amount || 0);
+                
+                if (currentPeriod.budget_used && currentPeriod.budget_used.amount) {
+                    valueUsed = parseFloat(currentPeriod.budget_used.amount);
+                }
+            }
+            // For agreements with no budget, we still want to track time worked
+            else {
+                budgetType = 'none';
+                // For no-budget agreements, get time worked from budget_used
+                if (currentPeriod.budget_used && currentPeriod.budget_used.value) {
+                    timeUsed = parseFloat(currentPeriod.budget_used.value) / 3600;
+                }
             }
             
             timeRemaining = timeAllowance - timeUsed;
+            const valueRemaining = valueAllowance - valueUsed;
             
             const periodStart = new Date(parseInt(currentPeriod.date_commenced) * 1000).toISOString().split('T')[0];
             const periodEnd = new Date(parseInt(currentPeriod.date_expires) * 1000).toISOString().split('T')[0];
             
             usage_summary = {
+                budget_type: budgetType,
                 time_allowance_hours: timeAllowance.toFixed(2),
                 time_used_hours: timeUsed.toFixed(2),
                 time_remaining_hours: timeRemaining.toFixed(2),
                 usage_percentage: timeAllowance > 0 
                     ? ((timeUsed / timeAllowance) * 100).toFixed(1) + '%'
                     : '0.0%',
-                value_budget: 0, // Could be calculated from rate if needed
-                value_used: 0,
+                value_allowance: valueAllowance.toFixed(2),
+                value_used: valueUsed.toFixed(2),
+                value_remaining: valueRemaining.toFixed(2),
                 period_start: periodStart,
                 period_end: periodEnd,
                 period_id: currentPeriod.id
@@ -571,7 +598,7 @@ app.get('/api/chat/debug/agreement/:id/periods', async (req, res) => {
 
     try {
         const agreementId = req.params.id;
-        const periodsUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/contracts/${agreementId}/periods?_fields=id,date_commenced,date_expires,allowance,budget_used,standing&_limit=10&_order_by=date_commenced&_order_by_desc=1`;
+        const periodsUrl = `https://${apiSettings.deployment}.api.accelo.com/api/v0/contracts/${agreementId}/periods?_fields=id,date_commenced,date_expires,allowance,budget_used,standing&_limit=50&_order_by=date_commenced&_order_by_desc=1`;
         
         const periodsResponse = await makeAcceloRequest(periodsUrl, apiSettings.accessToken);
         const periodsData = periodsResponse.response;
