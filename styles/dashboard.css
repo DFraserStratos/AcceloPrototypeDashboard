@@ -348,7 +348,8 @@
     align-items: center;
     justify-content: center;
     color: var(--text-tertiary);
-    margin-right: var(--spacing-xs);
+    margin-left: var(--spacing-md);
+    margin-right: var(--spacing-md);
     transition: color 0.2s ease;
 }
 
