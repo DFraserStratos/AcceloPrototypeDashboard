@@ -1560,13 +1560,18 @@ class Dashboard {
             block.dataset.companyId = companyId;
         }
 
+        // Create Accelo URL for the item
+        const acceloUrl = this.createAcceloUrl(item.id, type);
+        
         block.innerHTML = `
             <div class="compact-block-content">
                 <div class="compact-block-left">
                     <div class="compact-block-header">
                         <div class="compact-block-icon">${icon}</div>
                         <div class="compact-block-title-section">
-                            <div class="compact-block-title">${UIComponents.escapeHtml(title)}</div>
+                            <a href="${acceloUrl}" target="_blank" class="compact-block-title compact-block-title-link" title="Open in Accelo">
+                                ${UIComponents.escapeHtml(title)}
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -1605,6 +1610,26 @@ class Dashboard {
         `;
         
         return block;
+    }
+
+    /**
+     * Create Accelo URL for a project or agreement
+     */
+    createAcceloUrl(itemId, type) {
+        if (!window.acceloAPI || !window.acceloAPI.deployment) {
+            return '#';
+        }
+        
+        const deployment = window.acceloAPI.deployment;
+        
+        if (type === 'project') {
+            return `https://${deployment}.accelo.com/app/projects/${itemId}?tab=Overview`;
+        } else if (type === 'agreement') {
+            // Agreements use a different URL format
+            return `https://${deployment}.accelo.com/?action=view_contract&id=${itemId}#?selected_tab=overview#END`;
+        }
+        
+        return '#';
     }
 
     /**

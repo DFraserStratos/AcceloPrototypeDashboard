@@ -293,6 +293,8 @@
     border-color: var(--primary-light);
 }
 
+
+
 /* Status-based Block Styling */
 .compact-progress-block.status-danger {
     border-color: var(--danger-light);
@@ -560,6 +562,26 @@
     background: var(--danger-color);
     color: var(--text-inverse);
     box-shadow: var(--shadow-sm);
+}
+
+/* Clickable Title Link Styles */
+.compact-block-title-link {
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border-radius: var(--radius-xs);
+    padding: 2px 4px;
+    margin: -2px -4px;
+}
+
+.compact-block-title-link:hover {
+    color: var(--primary-color);
+    background: rgba(var(--primary-color-rgb), 0.08);
+    text-decoration: none;
+}
+
+.compact-block-title-link:active {
+    transform: translateY(1px);
 }
 
 /* Compact Welcome State */
