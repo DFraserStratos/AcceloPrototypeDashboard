@@ -150,6 +150,18 @@ class AcceloAPI {
     }
 
     /**
+     * Get a specific project by ID
+     */
+    async getProject(projectId) {
+        const params = new URLSearchParams({
+            _fields: 'id,title,standing,status,manager,date_started,date_due,billable,billable_seconds,unbillable_seconds,company,affiliation'
+        });
+
+        const response = await this.request(`/jobs/${projectId}?${params}`);
+        return response.response || null;
+    }
+
+    /**
      * Get agreements for a company
      */
     async getAgreements(companyId, filters = {}) {
@@ -161,6 +173,18 @@ class AcceloAPI {
 
         const response = await this.request(`/contracts?${params}`);
         return response.response || [];
+    }
+
+    /**
+     * Get a specific agreement by ID
+     */
+    async getAgreement(agreementId) {
+        const params = new URLSearchParams({
+            _fields: 'id,title,standing,status,date_started,date_expires,retainer_type,retainer_value,company,affiliation'
+        });
+
+        const response = await this.request(`/contracts/${agreementId}?${params}`);
+        return response.response || null;
     }
 
     /**

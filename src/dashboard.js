@@ -1293,16 +1293,16 @@ class Dashboard {
             this.updateSelectionCounter();
         };
         
-        // Handle clicks on the entire item
+        // Handle clicks on the entire item (including checkbox area)
         div.addEventListener('click', (e) => {
-            // Don't double-trigger if clicking directly on checkbox
-            if (e.target.type !== 'checkbox') {
-                toggleSelection();
+            // Prevent default checkbox behavior if clicking on checkbox elements
+            if (e.target.type === 'checkbox' || 
+                e.target.classList.contains('checkbox-label') || 
+                e.target.closest('.selection-checkbox')) {
+                e.preventDefault();
             }
+            toggleSelection();
         });
-        
-        // Handle checkbox changes
-        checkbox.addEventListener('change', toggleSelection);
         
         // Add keyboard navigation
         div.setAttribute('tabindex', '0');
@@ -1430,7 +1430,13 @@ class Dashboard {
         }
         
         try {
-            UIComponents.showLoading();
+            // Show loading state in the search results area instead of full screen
+            document.getElementById('searchResults').innerHTML = `
+                <div class="search-loading">
+                    <div class="spinner"></div>
+                    <p class="search-loading-text">Adding items to dashboard...</p>
+                </div>
+            `;
             
             // Convert selected items to array with type info
             const itemsToAdd = Array.from(this.selectedItems).map(id => {
@@ -1446,17 +1452,32 @@ class Dashboard {
                         const project = await window.acceloAPI.getProject(item.id);
                         const hours = await window.acceloAPI.getProjectHours(item.id);
                         
+                        // Debug: Log the project structure to understand company info
+                        console.log('Project API response:', project);
+                        console.log('Available company fields:', {
+                            company: project.company,
+                            affiliation: project.affiliation,
+                            company_id: project.company_id,
+                            company_name: project.company_name
+                        });
+                        
+                        // We know the company from the selection process, so use that instead
+                        const selectedCompany = this.selectedCompanies[0];
+                        const companyId = String(selectedCompany.id);
+                        const companyName = selectedCompany.name;
+                        
                         // Add to dashboard data with company info preserved
                         this.dashboardData.push({
                             ...project,
                             type: 'project',
                             hours: hours,
-                            company_info: project.company || project.affiliation
+                            company_id: companyId,
+                            company_name: companyName,
+                            company_info: selectedCompany
                         });
                         
                         // Add company to order if not already there
-                        const companyId = String(project.company_id || project.company?.id || project.affiliation?.id);
-                        if (companyId && !this.companyOrder.includes(companyId)) {
+                        if (!this.companyOrder.includes(companyId)) {
                             this.companyOrder.push(companyId);
                         }
                         
@@ -1465,17 +1486,32 @@ class Dashboard {
                         const agreement = await window.acceloAPI.getAgreement(item.id);
                         const usage = await window.acceloAPI.getAgreementUsage(item.id);
                         
+                        // Debug: Log the agreement structure to understand company info
+                        console.log('Agreement API response:', agreement);
+                        console.log('Available company fields:', {
+                            company: agreement.company,
+                            affiliation: agreement.affiliation,
+                            company_id: agreement.company_id,
+                            company_name: agreement.company_name
+                        });
+                        
+                        // We know the company from the selection process, so use that instead
+                        const selectedCompany = this.selectedCompanies[0];
+                        const companyId = String(selectedCompany.id);
+                        const companyName = selectedCompany.name;
+                        
                         // Add to dashboard data with company info preserved
                         this.dashboardData.push({
                             ...agreement,
                             type: 'agreement',
                             usage: usage,
-                            company_info: agreement.company || agreement.affiliation
+                            company_id: companyId,
+                            company_name: companyName,
+                            company_info: selectedCompany
                         });
                         
                         // Add company to order if not already there
-                        const companyId = String(agreement.company_id || agreement.company?.id || agreement.affiliation?.id);
-                        if (companyId && !this.companyOrder.includes(companyId)) {
+                        if (!this.companyOrder.includes(companyId)) {
                             this.companyOrder.push(companyId);
                         }
                     }
@@ -1508,8 +1544,8 @@ class Dashboard {
         } catch (error) {
             console.error('Failed to add items:', error);
             UIComponents.showToast('Failed to add items: ' + error.message, 'error');
-        } finally {
-            UIComponents.hideLoading();
+            // Restore the item selection UI on error
+            this.renderItemSelectionUI();
         }
     }
 
