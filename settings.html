@@ -3,287 +3,504 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accelo API Settings</title>
+    <title>Settings - Accelo Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/styles/main.css">
+    <link rel="stylesheet" href="/styles/dashboard.css">
     <style>
+        /* Settings Page Styles */
         .settings-container {
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-        
-        .settings-header {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 40px;
+            height: 100vh;
+            background: linear-gradient(135deg, var(--background-color) 0%, var(--background-secondary) 100%);
         }
-        
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 14px;
-            transition: color 0.3s ease;
-        }
-        
-        .back-link:hover {
-            color: var(--primary-color);
-        }
-        
-        .connection-status {
-            padding: 16px;
-            border-radius: var(--radius-md);
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .connection-status.connected {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .connection-status.disconnected {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .status-icon {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-        
-        .status-icon.connected {
-            background-color: #28a745;
-        }
-        
-        .status-icon.disconnected {
-            background-color: #dc3545;
-        }
-        
-        .debug-section {
-            margin-top: 40px;
-        }
-        
-        .debug-toggle {
-            cursor: pointer;
-            user-select: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
-        
-        .debug-toggle:hover {
-            color: var(--text-primary);
-        }
-        
-        .debug-log {
-            margin-top: 16px;
-            padding: 16px;
-            background-color: #f8f9fa;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            font-family: monospace;
-            font-size: 12px;
-            max-height: 400px;
+
+        .settings-main {
+            margin-top: 48px;
+            padding: var(--spacing-lg);
             overflow-y: auto;
-            display: none;
+            height: calc(100vh - 48px);
+            width: 100%;
+            display: flex;
+            gap: var(--spacing-xl);
         }
-        
-        .debug-log.show {
-            display: block;
+
+        .settings-left {
+            flex: 1;
+            max-width: 500px;
         }
-        
-        .log-entry {
-            margin-bottom: 8px;
-            padding: 4px 0;
-            border-bottom: 1px solid #e9ecef;
+
+        .settings-right {
+            flex: 1;
+            min-width: 400px;
         }
-        
-        .log-entry:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
+
+        .settings-section {
+            background: linear-gradient(135deg, var(--surface-color) 0%, #fefefe 100%);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: var(--spacing-lg);
         }
-        
-        .log-time {
-            color: #6c757d;
-            margin-right: 8px;
+
+        .settings-section:hover {
+            box-shadow: var(--shadow-md);
         }
-        
-        .log-level {
-            font-weight: bold;
-            margin-right: 8px;
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
         }
-        
-        .log-level.info { color: #17a2b8; }
-        .log-level.success { color: #28a745; }
-        .log-level.error { color: #dc3545; }
-        .log-level.warning { color: #ffc107; }
-        
-        .api-info {
-            background-color: #e8f4fd;
-            border: 1px solid #bee5eb;
-            padding: 16px;
-            border-radius: var(--radius-sm);
-            margin-bottom: 24px;
-            font-size: 14px;
-            line-height: 1.6;
+
+        .section-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: var(--font-size-sm);
         }
-        
-        .api-info h4 {
-            margin-top: 0;
-            margin-bottom: 8px;
-            color: #0c5460;
+
+        .section-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
         }
-        
-        .api-info ul {
-            margin: 8px 0;
-            padding-left: 24px;
+
+        /* Connection Status */
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-size-sm);
         }
-        
-        .api-info code {
-            background-color: #f1f1f1;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: monospace;
-            font-size: 13px;
+
+        .connection-status.connected {
+            background: linear-gradient(135deg, var(--success-light) 0%, #f0fdf4 100%);
+            border: 1px solid var(--success-color);
+            color: #166534;
         }
-        
-        .btn-sm {
-            padding: 4px 8px;
-            font-size: 12px;
-            border-radius: 3px;
+
+        .connection-status.disconnected {
+            background: linear-gradient(135deg, var(--danger-light) 0%, #fff5f5 100%);
+            border: 1px solid var(--danger-color);
+            color: #991b1b;
         }
-        
-        .log-entry-item {
-            margin-bottom: 8px;
-            padding: 6px;
-            border-left: 3px solid #dee2e6;
-            background-color: #f8f9fa;
-            font-size: 11px;
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-indicator.connected {
+            background: var(--success-color);
+        }
+
+        .status-indicator.disconnected {
+            background: var(--danger-color);
+        }
+
+        .status-content {
+            flex: 1;
             line-height: 1.4;
         }
-        
-        .log-entry-item.request { border-left-color: #007bff; }
-        .log-entry-item.response { border-left-color: #28a745; }
-        .log-entry-item.error { border-left-color: #dc3545; background-color: #fff5f5; }
-        .log-entry-item.info { border-left-color: #17a2b8; }
-        
+
+        .status-title {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .status-details {
+            font-size: var(--font-size-xs);
+            opacity: 0.8;
+        }
+
+        /* API Info Card */
+        .api-info-card {
+            background: linear-gradient(135deg, var(--info-light) 0%, #f0f9ff 100%);
+            border: 1px solid var(--info-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-size-xs);
+        }
+
+        .api-info-card h4 {
+            color: #0c4a6e;
+            margin: 0 0 var(--spacing-xs) 0;
+            font-size: var(--font-size-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .api-info-card p {
+            color: #0c4a6e;
+            margin: 0 0 var(--spacing-xs) 0;
+            line-height: var(--line-height-relaxed);
+        }
+
+        .api-info-card ul {
+            margin: 0;
+            padding-left: var(--spacing-md);
+            color: #0c4a6e;
+        }
+
+        .api-info-card li {
+            margin-bottom: 2px;
+            line-height: 1.4;
+        }
+
+        /* Enhanced Form Styling */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--spacing-md);
+        }
+
+        .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+            font-size: var(--font-size-sm);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            transition: all 0.2s ease;
+            background: var(--surface-color);
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-group .help-text {
+            margin-top: var(--spacing-xs);
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            line-height: var(--line-height-relaxed);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+        }
+
+        .form-actions .btn {
+            flex: 1;
+            font-size: var(--font-size-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+        }
+
+        /* Debug Section - Right Side */
+        .debug-section {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .debug-header {
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--border-color);
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        }
+
+        .debug-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 var(--spacing-xs) 0;
+            font-size: var(--font-size-base);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .debug-subtitle {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .debug-content {
+            flex: 1;
+            padding: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .debug-controls {
+            display: flex;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .debug-controls .btn {
+            font-size: var(--font-size-xs);
+            padding: var(--spacing-xs) var(--spacing-sm);
+        }
+
+        .debug-status {
+            margin-left: auto;
+            color: var(--text-secondary);
+            font-size: var(--font-size-xs);
+            align-self: center;
+        }
+
+        .debug-log {
+            flex: 1;
+            background: var(--gray-50);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            overflow-y: auto;
+            padding: var(--spacing-sm);
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+            font-size: var(--font-size-xs);
+        }
+
+        .log-entry {
+            margin-bottom: var(--spacing-xs);
+            padding: var(--spacing-xs);
+            border-left: 3px solid var(--border-color);
+            background: var(--surface-color);
+            border-radius: var(--radius-xs);
+            font-size: 10px;
+            line-height: 1.3;
+        }
+
+        .log-entry.request {
+            border-left-color: var(--primary-color);
+            background: rgba(59, 130, 246, 0.03);
+        }
+
+        .log-entry.response {
+            border-left-color: var(--success-color);
+            background: rgba(16, 185, 129, 0.03);
+        }
+
+        .log-entry.error {
+            border-left-color: var(--danger-color);
+            background: rgba(239, 68, 68, 0.03);
+        }
+
+        .log-entry.info {
+            border-left-color: var(--info-color);
+            background: rgba(6, 182, 212, 0.03);
+        }
+
         .log-entry-header {
-            font-weight: bold;
-            margin-bottom: 4px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+            font-weight: 600;
+            margin-bottom: 2px;
+            gap: var(--spacing-xs);
         }
-        
+
         .log-entry-time {
-            font-size: 10px;
-            color: #6c757d;
+            font-size: 9px;
+            color: var(--text-secondary);
             font-weight: normal;
+            flex-shrink: 0;
         }
-        
+
         .log-entry-details {
-            margin-top: 4px;
-            padding: 4px;
-            background-color: rgba(0,0,0,0.05);
-            border-radius: 2px;
+            margin-top: 2px;
+            padding: 2px;
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: var(--radius-xs);
             white-space: pre-wrap;
             word-break: break-all;
+            font-size: 9px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .settings-main {
+                flex-direction: column;
+                gap: var(--spacing-md);
+            }
+
+            .settings-left {
+                max-width: none;
+            }
+
+            .settings-right {
+                min-width: 0;
+                height: 400px;
+            }
+
+            .debug-section {
+                height: 400px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .settings-main {
+                padding: var(--spacing-md);
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .debug-controls {
+                flex-direction: column;
+            }
+
+            .debug-status {
+                margin-left: 0;
+                margin-top: var(--spacing-xs);
+            }
         }
     </style>
 </head>
 <body>
-    <div class="settings-container">
-        <div class="settings-header">
-            <h1>API Settings</h1>
-            <a href="/" class="back-link">
-                <span>←</span>
-                Back to Dashboard
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <h1 class="navbar-title">Settings</h1>
+        <div class="navbar-actions">
+            <a href="/" class="btn btn-icon btn-ghost" title="Back to Dashboard">
+                <i class="fa-solid fa-arrow-left"></i>
             </a>
         </div>
+    </nav>
 
-        <div id="connectionStatus" class="connection-status disconnected">
-            <span class="status-icon disconnected"></span>
-            <div>
-                <strong>Not Connected</strong>
-                <div class="text-small">Please configure your API credentials below</div>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>Accelo API Configuration</h2>
-            
-            <div class="api-info">
-                <h4>Service Application Authentication</h4>
-                <p>This application uses Service Application authentication (OAuth 2.0 Client Credentials flow).</p>
-                <ul>
-                    <li>Tokens are valid for 30 days</li>
-                    <li>The app executes as the user specified during Service Application registration</li>
-                    <li>Rate limit: 5,000 requests per hour</li>
-                </ul>
-            </div>
-
-            <form id="settingsForm">
-                <div class="form-group">
-                    <label for="deployment">Deployment Name</label>
-                    <input type="text" id="deployment" name="deployment" placeholder="stp" required>
-                    <div class="help-text">
-                        Your Accelo subdomain. For example, if your Accelo URL is https://mycompany.accelo.com, enter "mycompany".
+    <div class="settings-container">
+        <div class="settings-main">
+            <!-- Left Side - Settings -->
+            <div class="settings-left">
+                <!-- API Configuration Section -->
+                <div class="settings-section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <i class="fa-solid fa-plug"></i>
+                        </div>
+                        <h2 class="section-title">API Configuration</h2>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label for="clientId">Client ID</label>
-                    <input type="text" id="clientId" name="clientId" placeholder="service_app_xxxxx@yourcompany.accelo.com" required>
-                    <div class="help-text">
-                        The full Client ID from your Service Application registration.
+                    <!-- Connection Status -->
+                    <div id="connectionStatus" class="connection-status disconnected">
+                        <div class="status-indicator disconnected"></div>
+                        <div class="status-content">
+                            <div class="status-title">Not Connected</div>
+                            <div class="status-details">Please configure your API credentials below</div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label for="clientSecret">Client Secret</label>
-                    <input type="password" id="clientSecret" name="clientSecret" placeholder="w1XXXXXXXXXXXXXXXXXXXXXBR7" required>
-                    <div class="help-text">
-                        The Client Secret from your Service Application registration. This is stored securely and never sent to the browser.
-                    </div>
-                </div>
 
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <span id="btnText">Connect to Accelo</span>
-                        <span id="btnSpinner" class="spinner d-none"></span>
-                    </button>
-                    <button type="button" id="clearBtn" class="btn btn-secondary">Clear Settings</button>
-                </div>
-            </form>
-        </div>
 
-        <div class="debug-section">
-            <div class="debug-toggle" onclick="toggleDebugLog()">
-                <span id="debugToggleIcon">▶</span>
-                API Debug Log
+                    <!-- Configuration Form -->
+                    <form id="settingsForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="deployment">Deployment Name</label>
+                                <input type="text" id="deployment" name="deployment" placeholder="e.g., mycompany" required>
+                                <div class="help-text">
+                                    Your Accelo subdomain (e.g., "mycompany" for mycompany.accelo.com)
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="clientId">Client ID</label>
+                                <input type="text" id="clientId" name="clientId" placeholder="service_app_xxxxx@yourcompany.accelo.com" required>
+                                <div class="help-text">
+                                    Client ID from your Service Application. This will be saved.
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="clientSecret">Client Secret</label>
+                                <input type="password" id="clientSecret" name="clientSecret" placeholder="Enter your client secret" required>
+                                <div class="help-text">
+                                    Client Secret (never stored, required each time)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <span id="btnText">Connect</span>
+                                <span id="btnSpinner" class="spinner d-none"></span>
+                            </button>
+                            <button type="button" id="clearBtn" class="btn btn-secondary">Clear</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div id="debugLog" class="debug-log">
-                <div class="log-controls" style="margin-bottom: 12px; display: flex; gap: 8px;">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="refreshLogs()">Refresh</button>
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="clearLogs()">Clear Log</button>
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="copyLogs()">Copy to Clipboard</button>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="testAPI()">Test API</button>
-                    <span id="logStatus" class="text-small" style="margin-left: auto; align-self: center; color: #6c757d;"></span>
-                </div>
-                <div id="logEntries" style="max-height: 350px; overflow-y: auto; border: 1px solid #dee2e6; padding: 8px; background: white; border-radius: 4px;">
-                    <div class="text-muted text-center">Click Refresh to load logs</div>
+
+            <!-- Right Side - Debug Log -->
+            <div class="settings-right">
+                <div class="debug-section">
+                    <div class="debug-header">
+                        <h3 class="debug-title">
+                            <i class="fa-solid fa-bug"></i>
+                            API Request Log
+                        </h3>
+                        <p class="debug-subtitle">Monitor API requests and troubleshoot issues</p>
+                    </div>
+                    
+                    <div class="debug-content">
+                        <div class="debug-controls">
+                            <button type="button" class="btn btn-secondary" onclick="refreshLogs()">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                                Refresh
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="clearLogs()">
+                                <i class="fa-solid fa-trash"></i>
+                                Clear
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="copyLogs()">
+                                <i class="fa-solid fa-copy"></i>
+                                Copy
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="testAPI()">
+                                <i class="fa-solid fa-play"></i>
+                                Test
+                            </button>
+                            <span id="logStatus" class="debug-status">Ready</span>
+                        </div>
+                        
+                        <div class="debug-log" id="logEntries">
+                            <div class="text-center text-muted" style="padding: var(--spacing-lg); color: var(--text-secondary);">
+                                Click Refresh to load logs
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

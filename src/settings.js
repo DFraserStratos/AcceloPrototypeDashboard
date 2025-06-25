@@ -1,23 +1,96 @@
 /**
- * Settings page functionality
+ * Settings page functionality with persistent storage for Client ID and Deployment Name
  */
 
 let debugLogs = [];
 let currentSettings = null;
+let autoRefreshInterval = null;
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', async () => {
+    await loadSavedCredentials();
     await checkCurrentConnection();
     setupEventListeners();
     
     // Auto-detect deployment from Client ID
     document.getElementById('clientId').addEventListener('blur', autoDetectDeployment);
+    
+    // Save credentials when they change
+    document.getElementById('deployment').addEventListener('input', saveCredentials);
+    document.getElementById('clientId').addEventListener('input', saveCredentials);
+    
+    // Initial log load and setup auto-refresh
+    await refreshLogs();
+    startAutoRefresh();
 });
+
+// Load saved credentials from localStorage
+function loadSavedCredentials() {
+    try {
+        const savedCredentials = localStorage.getItem('accelo_credentials');
+        if (savedCredentials) {
+            const credentials = JSON.parse(savedCredentials);
+            
+            if (credentials.deployment) {
+                document.getElementById('deployment').value = credentials.deployment;
+            }
+            
+            if (credentials.clientId) {
+                document.getElementById('clientId').value = credentials.clientId;
+            }
+            
+            log('Loaded saved credentials from browser storage', 'info');
+        }
+    } catch (error) {
+        log(`Error loading saved credentials: ${error.message}`, 'error');
+    }
+}
+
+// Save credentials to localStorage
+function saveCredentials() {
+    try {
+        const deployment = document.getElementById('deployment').value.trim();
+        const clientId = document.getElementById('clientId').value.trim();
+        
+        if (deployment || clientId) {
+            const credentials = {
+                deployment: deployment,
+                clientId: clientId,
+                savedAt: new Date().toISOString()
+            };
+            
+            localStorage.setItem('accelo_credentials', JSON.stringify(credentials));
+            log('Credentials saved to browser storage', 'info');
+        }
+    } catch (error) {
+        log(`Error saving credentials: ${error.message}`, 'error');
+    }
+}
 
 // Setup event listeners
 function setupEventListeners() {
     document.getElementById('settingsForm').addEventListener('submit', handleConnect);
     document.getElementById('clearBtn').addEventListener('click', handleClearSettings);
+}
+
+// Start auto-refresh for logs
+function startAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+    
+    // Refresh logs every 30 seconds
+    autoRefreshInterval = setInterval(() => {
+        refreshLogs();
+    }, 30000);
+}
+
+// Stop auto-refresh
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
 }
 
 // Check current connection status
@@ -28,11 +101,6 @@ async function checkCurrentConnection() {
         const response = await fetch('/api/settings');
         if (response.ok) {
             currentSettings = await response.json();
-            
-            // Populate form with existing values
-            document.getElementById('deployment').value = currentSettings.deployment || '';
-            document.getElementById('clientId').value = currentSettings.clientId || '';
-            // Don't populate client secret for security
             
             // Check if token is still valid
             const tokenExpiry = new Date(currentSettings.tokenExpiry);
@@ -83,6 +151,9 @@ async function handleConnect(e) {
         return;
     }
     
+    // Save credentials before attempting connection
+    saveCredentials();
+    
     // Show loading state
     setLoadingState(true);
     
@@ -123,7 +194,7 @@ async function handleConnect(e) {
             : 'Unknown User';
         const userEmail = tokenData.account_details?.email || '';
         
-        // Save settings to server
+        // Save settings to server (without client secret)
         const settings = {
             deployment,
             clientId,
@@ -174,7 +245,7 @@ async function handleConnect(e) {
 
 // Handle clear settings
 async function handleClearSettings() {
-    if (!confirm('Are you sure you want to clear all settings? You will need to reconnect to use the dashboard.')) {
+    if (!confirm('Are you sure you want to clear all saved settings? This will remove your saved credentials and you will need to reconnect.')) {
         return;
     }
     
@@ -188,13 +259,16 @@ async function handleClearSettings() {
             body: JSON.stringify({})
         });
         
+        // Clear saved credentials from localStorage
+        localStorage.removeItem('accelo_credentials');
+        
         // Clear form
         document.getElementById('settingsForm').reset();
         currentSettings = null;
         
         updateConnectionStatus(false);
-        showAlert('Settings cleared successfully', 'info');
-        log('Settings cleared', 'info');
+        showAlert('All settings cleared successfully', 'info');
+        log('Settings and saved credentials cleared', 'info');
         
     } catch (error) {
         log(`Error clearing settings: ${error.message}`, 'error');
@@ -202,47 +276,39 @@ async function handleClearSettings() {
     }
 }
 
-// Update connection status display
+// Update connection status display with modern UI
 function updateConnectionStatus(connected, details = null) {
     const statusEl = document.getElementById('connectionStatus');
-    const statusIcon = statusEl.querySelector('.status-icon');
+    const statusIndicator = statusEl.querySelector('.status-indicator');
+    const statusContent = statusEl.querySelector('.status-content');
     
     if (connected) {
         statusEl.className = 'connection-status connected';
-        statusIcon.className = 'status-icon connected';
+        statusIndicator.className = 'status-indicator connected';
         
         if (typeof details === 'object') {
-            statusEl.innerHTML = `
-                <span class="status-icon connected"></span>
-                <div>
-                    <strong>Connected</strong>
-                    <div class="text-small">
-                        ${details.name} (${details.email})<br>
-                        Deployment: ${details.deployment}<br>
-                        ${details.expiryInfo}
-                    </div>
+            statusContent.innerHTML = `
+                <div class="status-title">Connected</div>
+                <div class="status-details">
+                    ${details.name} (${details.email})<br>
+                    Deployment: ${details.deployment}<br>
+                    ${details.expiryInfo}
                 </div>
             `;
         } else {
-            statusEl.innerHTML = `
-                <span class="status-icon connected"></span>
-                <div>
-                    <strong>Connected</strong>
-                    <div class="text-small">API connection is active</div>
-                </div>
+            statusContent.innerHTML = `
+                <div class="status-title">Connected</div>
+                <div class="status-details">API connection is active</div>
             `;
         }
     } else {
         statusEl.className = 'connection-status disconnected';
-        statusIcon.className = 'status-icon disconnected';
+        statusIndicator.className = 'status-indicator disconnected';
         
         const message = typeof details === 'string' ? details : 'Please configure your API credentials below';
-        statusEl.innerHTML = `
-            <span class="status-icon disconnected"></span>
-            <div>
-                <strong>Not Connected</strong>
-                <div class="text-small">${message}</div>
-            </div>
+        statusContent.innerHTML = `
+            <div class="status-title">Not Connected</div>
+            <div class="status-details">${message}</div>
         `;
     }
 }
@@ -256,6 +322,8 @@ function autoDetectDeployment() {
     if (match && !deploymentInput.value) {
         deploymentInput.value = match[1];
         log(`Auto-detected deployment: ${match[1]}`);
+        // Save the auto-detected deployment
+        saveCredentials();
     }
 }
 
@@ -271,12 +339,12 @@ function setLoadingState(loading) {
         btnSpinner.classList.remove('d-none');
     } else {
         btn.disabled = false;
-        btnText.textContent = 'Connect to Accelo';
+        btnText.textContent = 'Connect';
         btnSpinner.classList.add('d-none');
     }
 }
 
-// Show alert message
+// Show alert message with modern styling
 function showAlert(message, type = 'info') {
     // Remove any existing alerts
     const existingAlert = document.querySelector('.alert');
@@ -289,27 +357,14 @@ function showAlert(message, type = 'info') {
     alert.textContent = message;
     
     const form = document.getElementById('settingsForm');
-    form.parentNode.insertBefore(alert, form.nextSibling);
+    form.parentNode.insertBefore(alert, form);
     
     // Auto-remove after 5 seconds
     setTimeout(() => {
-        alert.remove();
+        if (alert.parentNode) {
+            alert.remove();
+        }
     }, 5000);
-}
-
-// Toggle debug log visibility
-function toggleDebugLog() {
-    const log = document.getElementById('debugLog');
-    const icon = document.getElementById('debugToggleIcon');
-    
-    if (log.classList.contains('show')) {
-        log.classList.remove('show');
-        icon.textContent = '▶';
-    } else {
-        log.classList.add('show');
-        icon.textContent = '▼';
-        refreshLogs();
-    }
 }
 
 async function refreshLogs() {
@@ -318,7 +373,7 @@ async function refreshLogs() {
         const data = await response.json();
         
         updateLogDisplay(data.logs);
-        updateLogStatus(`${data.count} entries (max ${data.maxLogs})`);
+        updateLogStatus(`${data.count} entries • Auto-refreshing`);
     } catch (error) {
         updateLogStatus('Error loading logs');
         console.error('Failed to load logs:', error);
@@ -364,6 +419,11 @@ async function copyLogs() {
         await navigator.clipboard.writeText(logText);
         showAlert('Logs copied to clipboard', 'success');
         updateLogStatus('Copied to clipboard');
+        
+        // Reset status after 3 seconds
+        setTimeout(() => {
+            updateLogStatus(`${data.logs.length} entries • Auto-refreshing`);
+        }, 3000);
     } catch (error) {
         showAlert('Failed to copy logs: ' + error.message, 'error');
     }
@@ -373,7 +433,7 @@ function updateLogDisplay(logs) {
     const container = document.getElementById('logEntries');
     
     if (!logs || logs.length === 0) {
-        container.innerHTML = '<div class="text-muted text-center">No logs available</div>';
+        container.innerHTML = '<div style="padding: var(--spacing-lg); text-align: center; color: var(--text-secondary);">No logs available</div>';
         return;
     }
     
@@ -382,7 +442,7 @@ function updateLogDisplay(logs) {
         const hasDetails = entry.details && Object.keys(entry.details).length > 0;
         
         return `
-            <div class="log-entry-item ${entry.type}">
+            <div class="log-entry ${entry.type}">
                 <div class="log-entry-header">
                     <span>${entry.message}</span>
                     <span class="log-entry-time">${timestamp}</span>
@@ -405,21 +465,18 @@ function updateLogStatus(message) {
     }
 }
 
-// Add log entry (legacy function for backward compatibility)
+// Add log entry (enhanced with modern display)
 function log(message, level = 'info') {
     const timestamp = new Date().toLocaleTimeString();
     debugLogs.push({ timestamp, level, message });
     
     console.log(`[${level.toUpperCase()}] ${message}`);
     
-    // Auto-refresh if debug log is visible
-    const debugDiv = document.getElementById('debugLog');
-    if (debugDiv && debugDiv.classList.contains('show')) {
-        setTimeout(refreshLogs, 100);
-    }
+    // Auto-refresh logs after a delay to capture new entries
+    setTimeout(refreshLogs, 100);
 }
 
-// Test API connection
+// Test API connection with enhanced feedback
 async function testAPI() {
     if (!currentSettings || !currentSettings.accessToken) {
         showAlert('No API connection configured. Please connect first.', 'error');
@@ -487,18 +544,27 @@ async function testAPI() {
             log('User permissions check failed (this may be expected for service apps)', 'warning');
         }
         
-        showAlert('API test completed successfully! Check the debug log for details.', 'success');
-        updateLogStatus('API test completed successfully');
+        showAlert('API test completed successfully!', 'success');
+        updateLogStatus('API test completed');
         
-        // Auto-refresh logs to show new entries
-        setTimeout(refreshLogs, 500);
+        // Reset to normal status after 3 seconds
+        setTimeout(() => {
+            refreshLogs();
+        }, 3000);
         
     } catch (error) {
         log(`API test failed: ${error.message}`, 'error');
         showAlert(`API test failed: ${error.message}`, 'error');
         updateLogStatus('API test failed');
         
-        // Auto-refresh logs to show error entries
-        setTimeout(refreshLogs, 500);
+        // Reset to normal status after 3 seconds
+        setTimeout(() => {
+            refreshLogs();
+        }, 3000);
     }
 }
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    stopAutoRefresh();
+});
