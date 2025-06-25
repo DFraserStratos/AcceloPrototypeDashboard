@@ -591,6 +591,11 @@ class Dashboard {
         // Save and re-render
         this.saveDashboardState();
         this.renderDashboard();
+        
+        // Reapply saved company colors after rendering
+        setTimeout(() => {
+            UIComponents.applySavedCompanyColors();
+        }, 50);
     }
     
     /**
@@ -642,6 +647,11 @@ class Dashboard {
         // Save and re-render
         this.saveDashboardState();
         this.renderDashboard();
+        
+        // Reapply saved company colors after rendering
+        setTimeout(() => {
+            UIComponents.applySavedCompanyColors();
+        }, 50);
     }
     
     /**
@@ -750,6 +760,11 @@ class Dashboard {
             // Save the refreshed data and re-render
             this.saveDashboardState();
             this.renderDashboard();
+            
+            // Reapply saved company colors after rendering
+            setTimeout(() => {
+                UIComponents.applySavedCompanyColors();
+            }, 50);
             
             UIComponents.showToast('Dashboard data refreshed successfully', 'success');
             
@@ -1147,6 +1162,11 @@ class Dashboard {
             // Save state and refresh UI
             this.saveDashboardState();
             this.renderDashboard();
+            
+            // Reapply saved company colors after rendering
+            setTimeout(() => {
+                UIComponents.applySavedCompanyColors();
+            }, 50);
             
             // Hide modal
             this.hideAddItemModal();
@@ -1719,6 +1739,11 @@ class Dashboard {
             // Save state and refresh UI
             this.saveDashboardState();
             this.renderDashboard();
+            
+            // Reapply saved company colors after rendering
+            setTimeout(() => {
+                UIComponents.applySavedCompanyColors();
+            }, 50);
             
             UIComponents.showToast(`${type === 'project' ? 'Project' : 'Agreement'} removed successfully`, 'success');
             
