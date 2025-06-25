@@ -14,6 +14,9 @@ class Dashboard {
         this.selectedCompanies = [];
         this.availableItems = []; // projects/agreements from selected companies
         
+        // Add company order tracking
+        this.companyOrder = []; // Track the explicit order of companies
+        
         // Drag and drop state
         this.dragState = {
             isDragging: false,
@@ -175,8 +178,6 @@ class Dashboard {
         const item = this.dashboardData.find(d => 
             String(d.id) === String(itemId) && d.type === itemType
         );
-        
-
         
         if (item) {
             this.dragState.draggedData = item;
@@ -486,7 +487,9 @@ class Dashboard {
      */
     handleCompanyBlockDrop(e) {
         const container = e.target.closest('.all-company-blocks-section');
-        if (!container) return;
+        if (!container) {
+            return;
+        }
         
         // Find position to insert
         const insertMarker = document.getElementById('drag-insert-marker');
@@ -503,8 +506,6 @@ class Dashboard {
      * Move a progress block to a new company/position
      */
     moveProgressBlock(item, targetCompanyId, afterElement) {
-
-        
         // Check if item exists
         if (!item) {
             console.error('Cannot move null item');
@@ -516,7 +517,6 @@ class Dashboard {
         
         // Prevent cross-company moves
         if (String(currentCompanyId) !== String(targetCompanyId)) {
-
             UIComponents.showToast('Progress blocks cannot be moved between companies', 'warning');
             return;
         }
@@ -586,8 +586,6 @@ class Dashboard {
             }
         }
         
-
-        
         // Save and re-render
         this.saveDashboardState();
         this.renderDashboard();
@@ -602,15 +600,21 @@ class Dashboard {
      * Reorder companies
      */
     reorderCompanies(companyId, afterElement) {
-        const companies = this.groupItemsByCompany();
-        // Keep company IDs as strings or numbers as they are
-        const companyIds = Object.keys(companies);
+        // Use the saved company order, not the order from groupItemsByCompany
+        let companyIds = [...this.companyOrder]; // Clone the array
+        
+        // If no saved order exists, get it from the data
+        if (companyIds.length === 0) {
+            const companies = this.groupItemsByCompany();
+            companyIds = Object.keys(companies);
+        }
         
         // Convert companyId to string for consistent comparison
         const draggedCompanyIdStr = String(companyId);
         
         // Remove the dragged company from the list
         const draggedIndex = companyIds.indexOf(draggedCompanyIdStr);
+        
         if (draggedIndex !== -1) {
             companyIds.splice(draggedIndex, 1);
         }
@@ -643,6 +647,9 @@ class Dashboard {
         });
         
         this.dashboardData = newDashboardData;
+        
+        // Save the new company order
+        this.companyOrder = companyIds;
         
         // Save and re-render
         this.saveDashboardState();
@@ -703,9 +710,17 @@ class Dashboard {
             try {
                 const state = JSON.parse(savedState);
                 this.dashboardData = state.dashboardData || [];
+                this.companyOrder = state.companyOrder || [];
+                
+                // If no company order saved, derive it from dashboardData
+                if (this.companyOrder.length === 0 && this.dashboardData.length > 0) {
+                    const companies = this.groupItemsByCompany();
+                    this.companyOrder = Object.keys(companies);
+                }
             } catch (error) {
                 console.error('Failed to parse saved state:', error);
                 this.dashboardData = [];
+                this.companyOrder = [];
             }
         }
     }
@@ -716,6 +731,7 @@ class Dashboard {
     saveDashboardState() {
         const state = {
             dashboardData: this.dashboardData,
+            companyOrder: this.companyOrder,
             lastUpdated: new Date().toISOString()
         };
         localStorage.setItem('accelo_dashboard_state', JSON.stringify(state));
@@ -1084,94 +1100,89 @@ class Dashboard {
     }
     
     /**
-     * Add selected items to dashboard (updated for new structure)
+     * Add selected items to the dashboard
      */
     async addSelectedItems() {
-        if (this.modalStep === 1) {
-            // If still on step 1, proceed to step 2
-            await this.proceedToItemSelection();
+        if (this.selectedItems.size === 0) {
+            UIComponents.showToast('Please select at least one item', 'warning');
             return;
         }
         
-        if (this.selectedItems.size === 0) {
-            UIComponents.showToast('Please select at least one item to add', 'warning');
-            return;
-        }
-
         try {
             UIComponents.showLoading();
             
-            // Process selected items
-            const itemsToAdd = [];
+            // Convert selected items to array with type info
+            const itemsToAdd = Array.from(this.selectedItems).map(id => {
+                const [type, itemId] = id.split('-');
+                return { type, id: itemId };
+            });
             
-            for (const itemKey of this.selectedItems) {
-                const [type, id] = itemKey.split('-');
-                
-                // Find the item in our available items
-                for (const companyData of this.availableItems) {
-                    const items = type === 'project' ? companyData.projects : companyData.agreements;
-                    const item = items.find(i => i.id == id);
-                    
-                    if (item) {
-                        // Get detailed data with hours/usage
-                        let detailedItem = { ...item };
+            // Get detailed info for each item
+            for (const item of itemsToAdd) {
+                try {
+                    if (item.type === 'project') {
+                        // Get project details and hours
+                        const project = await window.acceloAPI.getProject(item.id);
+                        const hours = await window.acceloAPI.getProjectHours(item.id);
                         
-                        // Set the type explicitly on the item
-                        detailedItem.type = type;
+                        // Add to dashboard data with company info preserved
+                        this.dashboardData.push({
+                            ...project,
+                            type: 'project',
+                            hours: hours,
+                            company_info: project.company || project.affiliation
+                        });
                         
-                        // Ensure company_id is set consistently
-                        if (!detailedItem.company_id && companyData.company) {
-                            detailedItem.company_id = companyData.company.id;
+                        // Add company to order if not already there
+                        const companyId = String(project.company_id || project.company?.id || project.affiliation?.id);
+                        if (companyId && !this.companyOrder.includes(companyId)) {
+                            this.companyOrder.push(companyId);
                         }
                         
-                        // Also store company info for display
-                        if (!detailedItem.company_info && companyData.company) {
-                            detailedItem.company_info = companyData.company;
-                        }
+                    } else if (item.type === 'agreement') {
+                        // Get agreement details and usage
+                        const agreement = await window.acceloAPI.getAgreement(item.id);
+                        const usage = await window.acceloAPI.getAgreementUsage(item.id);
                         
-                        if (type === 'project') {
-                            try {
-                                const hours = await window.acceloAPI.getProjectHours(item.id);
-                                detailedItem.hours = hours;
-                            } catch (error) {
-                                console.error(`Failed to get hours for project ${item.id}:`, error);
-                                detailedItem.hours = null;
-                            }
-                        } else {
-                            try {
-                                const usage = await window.acceloAPI.getAgreementUsage(item.id);
-                                detailedItem.usage = usage;
-                            } catch (error) {
-                                console.error(`Failed to get usage for agreement ${item.id}:`, error);
-                                detailedItem.usage = null;
-                            }
-                        }
+                        // Add to dashboard data with company info preserved
+                        this.dashboardData.push({
+                            ...agreement,
+                            type: 'agreement',
+                            usage: usage,
+                            company_info: agreement.company || agreement.affiliation
+                        });
                         
-                        itemsToAdd.push(detailedItem);
-                        break;
+                        // Add company to order if not already there
+                        const companyId = String(agreement.company_id || agreement.company?.id || agreement.affiliation?.id);
+                        if (companyId && !this.companyOrder.includes(companyId)) {
+                            this.companyOrder.push(companyId);
+                        }
                     }
+                    
+                    // Small delay to avoid rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                } catch (error) {
+                    console.error(`Failed to add ${item.type} ${item.id}:`, error);
+                    UIComponents.showToast(`Failed to add ${item.type}: ${error.message}`, 'error');
                 }
-                
-                // Small delay to avoid rate limiting
-                await new Promise(resolve => setTimeout(resolve, 100));
             }
             
-            // Add items to dashboard data
-            this.dashboardData.push(...itemsToAdd);
-            
-            // Save state and refresh UI
+            // Save state
             this.saveDashboardState();
+            
+            // Re-render dashboard
             this.renderDashboard();
+            
+            // Close modal
+            this.hideAddItemModal();
             
             // Reapply saved company colors after rendering
             setTimeout(() => {
                 UIComponents.applySavedCompanyColors();
             }, 50);
             
-            // Hide modal
-            this.hideAddItemModal();
-            
-            UIComponents.showToast(`${itemsToAdd.length} item${itemsToAdd.length === 1 ? '' : 's'} added successfully!`, 'success');
+            UIComponents.showToast(`Added ${itemsToAdd.length} item(s) to dashboard`, 'success');
             
         } catch (error) {
             console.error('Failed to add items:', error);
@@ -1182,81 +1193,88 @@ class Dashboard {
     }
 
     /**
-     * Render the dashboard
+     * Render the dashboard based on current data
      */
     renderDashboard() {
+        // Use company-grouped layout
         this.renderCompanyGroupedLayout();
     }
     
     /**
-     * Render company-grouped layout matching the user's mockup
+     * Render company-grouped layout matching user's mockup
      */
     renderCompanyGroupedLayout() {
-        const contentGrid = document.getElementById('contentGrid');
+        const contentGrid = document.querySelector('.content-grid');
         
-        // Hide sidebar since we're using a different layout
+        // Hide the sidebar since we're using company-grouped layout
         const sidebar = document.getElementById('sidebar');
-        sidebar.style.display = 'none';
-        
-        // Adjust main content to use full width
-        const mainContent = document.querySelector('.main-content');
-        mainContent.style.marginLeft = '0';
-        
-        if (this.dashboardData.length === 0) {
-            contentGrid.innerHTML = `
-                <div class="dashboard-welcome">
-                    <div class="welcome-icon"><i class="fa-solid fa-chart-bar"></i></div>
-                    <h2>Welcome to your Accelo Dashboard</h2>
-                    <p>Start by adding companies, projects, and agreements to track your progress.</p>
-                    <button class="btn btn-primary btn-lg" onclick="dashboard.showAddItemModal()">
-                        Get Started
-                    </button>
-                </div>
-            `;
-            return;
+        if (sidebar) {
+            sidebar.style.display = 'none';
         }
         
-        // Group items by company
-        const companiesData = this.groupItemsByCompany();
-        
-        // Get ordered list of company IDs based on the order they appear in dashboardData
-        const orderedCompanyIds = [];
-        const seenCompanies = new Set();
-        
-        this.dashboardData.forEach(item => {
-            const companyId = String(item.company_id || (item.company_info ? item.company_info.id : 'unknown'));
-            if (!seenCompanies.has(companyId) && companiesData[companyId]) {
-                orderedCompanyIds.push(companyId);
-                seenCompanies.add(companyId);
-            }
-        });
-        
-        // Create the company-grouped layout
+        // Clear and create layout
         const layoutContainer = document.createElement('div');
         layoutContainer.className = 'company-grouped-layout';
         
-        // Get saved width preference
-        const savedWidth = localStorage.getItem('accelo_dashboard_company_width');
-        const companyWidth = savedWidth ? Math.min(Math.max(parseInt(savedWidth), 80), 300) : 120;
-        
-        // Set CSS custom property for all rows
-        document.documentElement.style.setProperty('--company-blocks-width', companyWidth + 'px');
-        
-        // Create main container with split layout
+        // Create main split container
         const mainSplitContainer = document.createElement('div');
         mainSplitContainer.className = 'main-split-container';
         
-        // Create left side (all company blocks)
+        // Get all companies
+        const companies = this.groupItemsByCompany();
+        
+        // Use saved company order or derive from data
+        let companyOrder = this.companyOrder;
+        if (companyOrder.length === 0) {
+            companyOrder = Object.keys(companies);
+            this.companyOrder = companyOrder;
+        }
+        
+        // Filter out companies that no longer have items
+        companyOrder = companyOrder.filter(id => companies[id]);
+        
+        // Check for new companies not in the order
+        Object.keys(companies).forEach(companyId => {
+            if (!companyOrder.includes(companyId)) {
+                companyOrder.push(companyId);
+            }
+        });
+        
+        // Update the saved order
+        this.companyOrder = companyOrder;
+        
+        // Create all company blocks section
         const allCompanyBlocksSection = document.createElement('div');
         allCompanyBlocksSection.className = 'all-company-blocks-section';
         
-        // Create right side (all progress blocks)
+        // Create all progress blocks section
         const allProgressBlocksSection = document.createElement('div');
         allProgressBlocksSection.className = 'all-progress-blocks-section';
         
-        // Add all company blocks and progress blocks in the correct order
-        orderedCompanyIds.forEach((companyId, index) => {
-            const data = companiesData[companyId];
+        // Get saved company width or use default
+        const savedCompanyWidth = localStorage.getItem('accelo_dashboard_company_width');
+        const companyWidth = savedCompanyWidth ? parseInt(savedCompanyWidth) : 150;
+        document.documentElement.style.setProperty('--company-blocks-width', companyWidth + 'px');
+        
+        if (companyOrder.length === 0) {
+            const emptyState = UIComponents.createEmptyState(
+                'No items on dashboard',
+                'Click the "Add Items" button to add projects and agreements to your dashboard',
+                'fa-clipboard'
+            );
+            layoutContainer.appendChild(emptyState);
+            contentGrid.innerHTML = '';
+            contentGrid.appendChild(layoutContainer);
+            return;
+        }
+        
+        // Create company blocks and progress containers
+        companyOrder.forEach((companyId, index) => {
+            const companyData = companies[companyId];
+            if (!companyData) return;
+            
+            const company = companyData.company;
+            
             // Create company block
             const companyBlock = document.createElement('div');
             companyBlock.className = 'company-block';
@@ -1265,7 +1283,7 @@ class Dashboard {
             companyBlock.dataset.companyIndex = index;
             
             // Calculate height based on number of progress items
-            const itemCount = data.items.length;
+            const itemCount = companyData.items.length;
             const progressBlockHeight = 50; // Base height of each progress block
             const gapHeight = 8; // var(--spacing-xs)
             const totalHeight = (progressBlockHeight * itemCount) + (gapHeight * (itemCount - 1));
@@ -1277,10 +1295,10 @@ class Dashboard {
             
             companyBlock.innerHTML = `
                 <div class="company-block-content">
-                    <div class="company-block-name">${UIComponents.escapeHtml(data.company.name)}</div>
+                    <div class="company-block-name">${UIComponents.escapeHtml(company.name)}</div>
                     <div class="company-block-overlay">
                         <button class="btn btn-icon btn-ghost company-color-btn" 
-                                onclick="event.stopPropagation(); UIComponents.showColorPicker(${companyId}, '${UIComponents.escapeHtml(data.company.name)}')" 
+                                onclick="event.stopPropagation(); UIComponents.showColorPicker(${companyId}, '${UIComponents.escapeHtml(company.name)}')" 
                                 title="Change company color">
                             <i class="fa-solid fa-palette"></i>
                         </button>
@@ -1305,8 +1323,6 @@ class Dashboard {
                 const itemCompanyId = item.company_id || (item.company_info ? item.company_info.id : null);
                 return String(itemCompanyId) === String(companyId);
             });
-            
-
             
             companyItems.forEach(item => {
                 const block = this.createCompactProgressBlock(item);

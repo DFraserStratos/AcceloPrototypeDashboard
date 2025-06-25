@@ -88,6 +88,11 @@
     width: 100%;
 }
 
+/* Hide sidebar when using company-grouped layout */
+.dashboard-container:has(.company-grouped-layout) .sidebar {
+    display: none;
+}
+
 /* Main Split Container */
 .main-split-container {
     display: flex;

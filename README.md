@@ -218,6 +218,7 @@ The dashboard features a company-grouped layout with two main areas:
 - **Visual Feedback**: 
   - Company blocks show dragging state with reduced opacity
   - Insertion marker indicates drop position
+- **Persistent Order**: Company order is maintained across multiple drag operations and page refreshes
 - **Auto-Adjustment**: Company block heights automatically adjust after reordering
 
 #### Interaction Details
