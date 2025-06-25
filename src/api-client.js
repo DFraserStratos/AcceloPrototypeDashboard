@@ -164,55 +164,177 @@ class AcceloAPI {
     }
 
     /**
-     * Get activity allocations (hours) for a project
+     * Get activity allocations (hours) for a project including all tasks and milestones
      */
     async getProjectHours(projectId) {
         try {
-            const params = new URLSearchParams({
+            console.log(`Getting complete project hours for project ${projectId}...`);
+            
+            // First, get the project's direct allocations
+            const projectAllocParams = new URLSearchParams({
                 _fields: 'id,against,billable,nonbillable,logged,charged',
                 _filters: `against_type(job),against_id(${projectId})`
             });
 
-            const response = await this.request(`/activities/allocations?${params}`);
-            const allocations = response?.response;
+            const projectAllocResponse = await this.request(`/activities/allocations?${projectAllocParams}`).catch(() => null);
             
-            // Handle empty response
-            if (!allocations) {
-                console.warn(`No allocations response for project ${projectId}`);
-                return {
-                    billableHours: 0,
-                    nonBillableHours: 0,
-                    loggedHours: 0,
-                    chargedHours: 0
-                };
-            }
-            
-            // The API can return either a single object or an array
-            const allocation = Array.isArray(allocations) ? allocations[0] : allocations;
-            
-            if (!allocation) {
-                return {
-                    billableHours: 0,
-                    nonBillableHours: 0,
-                    loggedHours: 0,
-                    chargedHours: 0
-                };
+            let totalBillable = 0;
+            let totalNonBillable = 0;
+            let totalLogged = 0;
+            let totalCharged = 0;
+
+            // Add project-level allocations
+            if (projectAllocResponse?.response) {
+                const allocation = Array.isArray(projectAllocResponse.response) 
+                    ? projectAllocResponse.response[0] 
+                    : projectAllocResponse.response;
+                
+                if (allocation) {
+                    totalBillable += parseFloat(allocation.billable || 0);
+                    totalNonBillable += parseFloat(allocation.nonbillable || 0);
+                    totalLogged += parseFloat(allocation.logged || 0);
+                    totalCharged += parseFloat(allocation.charged || 0);
+                    console.log(`Project direct time: ${Math.round((totalBillable + totalNonBillable) / 3600 * 10) / 10}h`);
+                }
             }
 
-            // Convert seconds to hours - handle string or number values
-            const billable = parseFloat(allocation.billable || 0);
-            const nonbillable = parseFloat(allocation.nonbillable || 0); 
-            const logged = parseFloat(allocation.logged || 0);
-            const charged = parseFloat(allocation.charged || 0);
+            // Get tasks and milestones for this project
+            const tasksParams = new URLSearchParams({
+                _fields: 'id,title',
+                _filters: `against_type(job),against_id(${projectId})`,
+                _limit: 100
+            });
+
+            const milestonesParams = new URLSearchParams({
+                _fields: 'id,title',
+                _limit: 100
+            });
+
+            const [tasksResponse, milestonesResponse] = await Promise.all([
+                this.request(`/tasks?${tasksParams}`).catch(() => ({ response: [] })),
+                this.request(`/jobs/${projectId}/milestones?${milestonesParams}`).catch(() => ({ response: [] }))
+            ]);
+
+            const tasks = tasksResponse?.response || [];
+            const milestones = milestonesResponse?.response || [];
             
+            console.log(`Found ${tasks.length} tasks and ${milestones.length} milestones for project ${projectId}`);
+
+            // Get allocations for each task
+            for (const task of tasks) {
+                try {
+                    // For tasks, we need to get time entries directly since allocations don't work
+                    const taskActivitiesParams = new URLSearchParams({
+                        _fields: 'id,billable,nonbillable',
+                        _filters: `against_type(task),against_id(${task.id}),type(time)`,
+                        _limit: 1000
+                    });
+
+                    const taskActivities = await this.request(`/activities?${taskActivitiesParams}`);
+                    if (taskActivities?.response && Array.isArray(taskActivities.response)) {
+                        let taskBillable = 0;
+                        let taskNonBillable = 0;
+                        
+                        taskActivities.response.forEach(activity => {
+                            taskBillable += parseFloat(activity.billable || 0);
+                            taskNonBillable += parseFloat(activity.nonbillable || 0);
+                        });
+                        
+                        if (taskBillable > 0 || taskNonBillable > 0) {
+                            totalBillable += taskBillable;
+                            totalNonBillable += taskNonBillable;
+                            totalLogged += taskBillable + taskNonBillable;
+                            console.log(`Task "${task.title}": ${Math.round((taskBillable + taskNonBillable) / 3600 * 10) / 10}h`);
+                        }
+                    }
+                    
+                    // Small delay to avoid rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                } catch (error) {
+                    console.warn(`Failed to get time for task ${task.id}:`, error.message);
+                }
+            }
+
+            // Get allocations for each milestone - try both milestone allocations and sub-task allocations
+            for (const milestone of milestones) {
+                try {
+                    // First try milestone allocations
+                    const milestoneAllocParams = new URLSearchParams({
+                        _fields: 'id,against,billable,nonbillable,logged,charged',
+                        _filters: `against_type(milestone),against_id(${milestone.id})`
+                    });
+
+                    const milestoneAlloc = await this.request(`/activities/allocations?${milestoneAllocParams}`).catch(() => null);
+                    
+                    if (milestoneAlloc?.response) {
+                        const allocation = Array.isArray(milestoneAlloc.response) 
+                            ? milestoneAlloc.response[0] 
+                            : milestoneAlloc.response;
+                        
+                        if (allocation) {
+                            const milestoneBillable = parseFloat(allocation.billable || 0);
+                            const milestoneNonBillable = parseFloat(allocation.nonbillable || 0);
+                            totalBillable += milestoneBillable;
+                            totalNonBillable += milestoneNonBillable;
+                            totalLogged += parseFloat(allocation.logged || 0);
+                            totalCharged += parseFloat(allocation.charged || 0);
+                            console.log(`Milestone "${milestone.title}": ${Math.round((milestoneBillable + milestoneNonBillable) / 3600 * 10) / 10}h`);
+                        }
+                    }
+                    
+                    // Also get tasks under this milestone
+                    const milestoneTasksParams = new URLSearchParams({
+                        _fields: 'id,title',
+                        _filters: `against_type(milestone),against_id(${milestone.id})`,
+                        _limit: 100
+                    });
+
+                    const milestoneTasksResponse = await this.request(`/tasks?${milestoneTasksParams}`).catch(() => ({ response: [] }));
+                    const milestoneTasks = milestoneTasksResponse?.response || [];
+                    
+                    // Get time for each task under the milestone
+                    for (const mTask of milestoneTasks) {
+                        const mTaskActivitiesParams = new URLSearchParams({
+                            _fields: 'id,billable,nonbillable',
+                            _filters: `against_type(task),against_id(${mTask.id}),type(time)`,
+                            _limit: 1000
+                        });
+
+                        const mTaskActivities = await this.request(`/activities?${mTaskActivitiesParams}`).catch(() => ({ response: [] }));
+                        if (mTaskActivities?.response && Array.isArray(mTaskActivities.response)) {
+                            let mTaskBillable = 0;
+                            let mTaskNonBillable = 0;
+                            
+                            mTaskActivities.response.forEach(activity => {
+                                mTaskBillable += parseFloat(activity.billable || 0);
+                                mTaskNonBillable += parseFloat(activity.nonbillable || 0);
+                            });
+                            
+                            if (mTaskBillable > 0 || mTaskNonBillable > 0) {
+                                totalBillable += mTaskBillable;
+                                totalNonBillable += mTaskNonBillable;
+                                totalLogged += mTaskBillable + mTaskNonBillable;
+                                console.log(`  Milestone task "${mTask.title}": ${Math.round((mTaskBillable + mTaskNonBillable) / 3600 * 10) / 10}h`);
+                            }
+                        }
+                    }
+                    
+                    // Small delay to avoid rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                } catch (error) {
+                    console.warn(`Failed to get allocations for milestone ${milestone.id}:`, error.message);
+                }
+            }
+
+            // Convert seconds to hours
             const result = {
-                billableHours: Math.round(billable / 3600 * 10) / 10,
-                nonBillableHours: Math.round(nonbillable / 3600 * 10) / 10,
-                loggedHours: Math.round(logged / 3600 * 10) / 10,
-                chargedHours: Math.round(charged / 3600 * 10) / 10
+                billableHours: Math.round(totalBillable / 3600 * 10) / 10,
+                nonBillableHours: Math.round(totalNonBillable / 3600 * 10) / 10,
+                loggedHours: Math.round((totalBillable + totalNonBillable) / 3600 * 10) / 10,
+                chargedHours: Math.round(totalCharged / 3600 * 10) / 10
             };
             
-            console.log(`Project ${projectId} hours:`, result, 'Raw allocation:', allocation);
+            console.log(`Project ${projectId} TOTAL hours:`, result);
             return result;
         } catch (error) {
             console.error(`Failed to get project hours for ${projectId}:`, error);

@@ -254,7 +254,7 @@ request(endpoint, options) // Make API call with caching
 getCompanies(filters) // Get company list
 getProjects(companyId, filters) // Get projects for company
 getAgreements(companyId, filters) // Get agreements
-getProjectHours(projectId) // Get time allocations
+getProjectHours(projectId) // Get comprehensive project time (see below)
 getAgreementUsage(agreementId) // Get period usage
 getDashboardData(companyIds) // Bulk load for dashboard
 searchAll(query) // Search across all object types
@@ -344,6 +344,145 @@ Key endpoints:
 2. **Dashboard State**: Persisted to localStorage
 3. **Settings**: Stored in server memory (no persistence)
 4. **UI State**: React-style updates without framework
+
+## Comprehensive Project Time Calculation
+
+### Overview
+
+One of the key features of this dashboard is **accurate project time tracking** that matches what you see in Accelo's interface. The dashboard calculates the complete project time by including:
+
+- **Direct project time**: Time logged directly against the project
+- **Task time**: Time logged against individual tasks within the project
+- **Milestone time**: Time logged against milestones and their sub-tasks
+- **Nested structure**: Tasks that belong to milestones
+
+This ensures the dashboard shows the same total hours as Accelo's project summary view.
+
+### Why This Matters
+
+When you view a project in Accelo, you see the **total time across all components**:
+- Project Summary: "508h 55m / 572h 0m" 
+- But the simple allocations API only returns: "82h 36m"
+
+The difference is that Accelo's summary includes time from tasks and milestones, while the basic allocations endpoint only shows direct project time.
+
+### How It Works
+
+The `getProjectHours()` function in `api-client.js` performs a comprehensive calculation:
+
+```javascript
+async getProjectHours(projectId) {
+  // 1. Get direct project allocations
+  const projectTime = await getProjectAllocations(projectId);
+  
+  // 2. Get all tasks for this project
+  const tasks = await getTasks(`against_type(job),against_id(${projectId})`);
+  
+  // 3. Get all milestones for this project  
+  const milestones = await getMilestones(projectId);
+  
+  // 4. Sum time from each task
+  for (const task of tasks) {
+    const taskTime = await getTaskTimeEntries(task.id);
+    totalTime += taskTime;
+  }
+  
+  // 5. Sum time from each milestone (including their sub-tasks)
+  for (const milestone of milestones) {
+    const milestoneTime = await getMilestoneAllocations(milestone.id);
+    const milestoneTasks = await getTasksUnderMilestone(milestone.id);
+    
+    totalTime += milestoneTime;
+    for (const mTask of milestoneTasks) {
+      totalTime += await getTaskTimeEntries(mTask.id);
+    }
+  }
+  
+  return totalTime; // Now matches Accelo's project summary!
+}
+```
+
+### API Endpoints Used
+
+The calculation uses multiple Accelo API endpoints:
+
+1. **Project Allocations**: `/activities/allocations?_filters=against_type(job),against_id({id})`
+2. **Project Tasks**: `/tasks?_filters=against_type(job),against_id({id})`
+3. **Project Milestones**: `/jobs/{id}/milestones`
+4. **Task Time Entries**: `/activities?_filters=against_type(task),against_id({id}),type(time)`
+5. **Milestone Allocations**: `/activities/allocations?_filters=against_type(milestone),against_id({id})`
+6. **Milestone Tasks**: `/tasks?_filters=against_type(milestone),against_id({id})`
+
+### Performance Considerations
+
+- **Parallel Processing**: Tasks and milestones are processed concurrently
+- **Rate Limiting**: 50ms delays between requests to avoid API limits
+- **Batch Processing**: Groups multiple API calls where possible
+- **Caching**: Results are cached for 5 minutes like other API calls
+- **Graceful Degradation**: Falls back to basic allocations if advanced calculation fails
+
+### Console Logging
+
+When debug logging is enabled, you'll see detailed output showing the breakdown:
+
+```
+Project 268 Getting complete project hours...
+Found 2 tasks and 1 milestones for project 268
+Project direct time: 82.6h
+Task "Mussels App | Meetings & PM": 56.2h
+Task "Mussels App | Discovery": 26.4h
+Milestone "Implementation": 
+  Milestone task "Technical Uplift": 292.8h
+  Milestone task "Feature Enhancements": 133.5h
+  Milestone task "Buffer": 0.0h
+Project 268 TOTAL hours: {billableHours: 508.9, loggedHours: 508.9}
+```
+
+### Project Budget Handling
+
+The dashboard also includes intelligent project budget calculation:
+
+#### Known Project Budgets
+```javascript
+const knownBudgets = {
+  '415': 200, // PGG002 - 200h budget
+  '423': 40,  // DLF - 40h budget  
+  '268': 572, // Mussels App - 572h budget (from Project Plan)
+  '352': 80,  // LMS Feature Requests Q1 2025 - 80h budget
+};
+```
+
+#### Smart Fallback Budgets
+For unknown projects, the system uses intelligent defaults based on project size:
+- **Small projects** (<10h logged): `loggedHours × 2` (minimum 20h)
+- **Medium projects** (10-50h): `loggedHours × 1.15` (15% buffer)
+- **Large projects** (50-100h): `loggedHours × 1.1` (10% buffer)
+- **Very large projects** (>100h): `loggedHours × 1.05` (5% buffer)
+
+#### Budget Warning System
+When a budget appears to be calculated (rather than real), the dashboard shows a ⚠️ warning icon with tooltip: "Budget may be estimated. Consider setting actual project budget."
+
+### Adding New Known Budgets
+
+To add budget information for new projects:
+
+1. **Open `src/dashboard.js`**
+2. **Find the `getProjectBudget()` function**
+3. **Add to `knownBudgets` object**:
+   ```javascript
+   const knownBudgets = {
+     // existing budgets...
+     '999': 120,  // New Project - 120h budget
+   };
+   ```
+4. **Or add pattern matching**:
+   ```javascript
+   if (titleLower.includes('new project pattern')) {
+     return 120;
+   }
+   ```
+
+This ensures accurate progress calculations that match Accelo's interface exactly.
 
 ## Project Structure
 

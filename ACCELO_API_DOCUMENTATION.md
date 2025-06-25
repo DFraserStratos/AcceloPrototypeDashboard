@@ -516,6 +516,74 @@ Historical time entries:
 GET /activities/allocations
 ```
 
+#### Comprehensive Project Time Calculation
+
+**Important Note**: The basic `/activities/allocations` endpoint for projects only returns time logged directly against the project. To get the complete project time (matching Accelo's project summary), you need to aggregate time from multiple sources:
+
+1. **Project-level allocations**:
+   ```http
+   GET /activities/allocations?_filters=against_type(job),against_id({project_id})
+   ```
+
+2. **Task-level time entries**:
+   ```http
+   GET /tasks?_filters=against_type(job),against_id({project_id})
+   GET /activities?_filters=against_type(task),against_id({task_id}),type(time)
+   ```
+
+3. **Milestone-level allocations and their tasks**:
+   ```http
+   GET /jobs/{project_id}/milestones
+   GET /activities/allocations?_filters=against_type(milestone),against_id({milestone_id})
+   GET /tasks?_filters=against_type(milestone),against_id({milestone_id})
+   ```
+
+**Example Breakdown**:
+- Mussels App project shows "82h 36m" from basic allocations
+- But Accelo's project summary shows "508h 55m" total
+- The difference comes from tasks (133h) and milestone tasks (293h)
+
+**Implementation Example**:
+```javascript
+async function getCompleteProjectTime(projectId) {
+  // 1. Get project-level time
+  const projectAllocations = await getAllocations(`against_type(job),against_id(${projectId})`);
+  
+  // 2. Get and sum task time
+  const tasks = await getTasks(`against_type(job),against_id(${projectId})`);
+  let taskTime = 0;
+  for (const task of tasks) {
+    const timeEntries = await getActivities(`against_type(task),against_id(${task.id}),type(time)`);
+    taskTime += sumTimeEntries(timeEntries);
+  }
+  
+  // 3. Get and sum milestone time (including milestone tasks)
+  const milestones = await getMilestones(projectId);
+  let milestoneTime = 0;
+  for (const milestone of milestones) {
+    // Direct milestone allocations
+    const milestoneAllocations = await getAllocations(`against_type(milestone),against_id(${milestone.id})`);
+    milestoneTime += sumAllocations(milestoneAllocations);
+    
+    // Tasks under this milestone
+    const milestoneTasks = await getTasks(`against_type(milestone),against_id(${milestone.id})`);
+    for (const task of milestoneTasks) {
+      const timeEntries = await getActivities(`against_type(task),against_id(${task.id}),type(time)`);
+      milestoneTime += sumTimeEntries(timeEntries);
+    }
+  }
+  
+  return {
+    projectTime: sumAllocations(projectAllocations),
+    taskTime: taskTime,
+    milestoneTime: milestoneTime,
+    total: sumAllocations(projectAllocations) + taskTime + milestoneTime
+  };
+}
+```
+
+This comprehensive calculation ensures your dashboard matches Accelo's project time display exactly.
+
 ## Financial Operations
 
 ### Invoices

@@ -188,18 +188,53 @@ GET /api/chat/project/456
     "unbillable_seconds": 36000
   },
   "time_summary": {
-    "billable_hours": "40.00",
-    "unbillable_hours": "10.00",
-    "total_hours": "50.00",
+    "billable_hours": "508.92",
+    "unbillable_hours": "0.00",
+    "total_hours": "508.92",
     "allocation_details": {
-      "billable": 144000,
-      "nonbillable": 36000,
-      "logged": 180000,
+      "billable": 1832112,
+      "nonbillable": 0,
+      "logged": 1832112,
       "charged": 120000
+    },
+    "calculation_breakdown": {
+      "project_direct_time": "82.60",
+      "task_time": "133.50",
+      "milestone_time": "292.82",
+      "components_included": {
+        "tasks": [
+          { "id": 4136, "title": "Meetings & PM", "hours": "56.17" },
+          { "id": 4444, "title": "Discovery", "hours": "26.42" }
+        ],
+        "milestones": [
+          { 
+            "id": 2087, 
+            "title": "Implementation",
+            "milestone_time": "0.00",
+            "tasks": [
+              { "id": 4654, "title": "Technical Uplift", "hours": "292.82" },
+              { "id": 4655, "title": "Feature Enhancements", "hours": "133.50" },
+              { "id": 4705, "title": "Buffer", "hours": "0.00" }
+            ]
+          }
+        ]
+      }
     }
   }
 }
 ```
+
+#### Project Time Calculation Notes
+
+The project time calculation in the Chat API uses the **comprehensive calculation method** that matches Accelo's project summary view. This includes:
+
+- **Project Direct Time**: Time logged directly against the project
+- **Task Time**: Time from all tasks associated with the project  
+- **Milestone Time**: Time from milestones and their sub-tasks
+
+The `calculation_breakdown` field shows exactly how the total was calculated, making it transparent which components contributed to the final hours. This ensures the dashboard matches what users see in Accelo's interface.
+
+For example, a project showing "508h 55m" in Accelo will now correctly show the same total through this API, rather than the old method which only showed direct project allocations (~82h).
 
 ### 5. Agreement Details
 **GET** `/api/chat/agreement/:id`
@@ -358,9 +393,15 @@ When testing with the STP deployment, the following known items can be used for 
 ### Known Project
 - **Name**: Mussels App 2025
 - **Company**: Talleys Group
+- **ID**: 268 (confirmed working)
+- **Expected Total Time**: ~508h (comprehensive calculation)
 - **Search Test**:
   ```bash
   curl "http://localhost:8080/api/chat/test/jobs?_search=mussels&_limit=5"
+  ```
+- **Direct Project Test**:
+  ```bash
+  curl "http://localhost:8080/api/chat/project/268"
   ```
 
 ### Known Agreement

@@ -669,6 +669,7 @@ class Dashboard {
         let loggedHours = 0;
         let totalHours = 0;
         let percentage = 0;
+        let isBudgetSuspicious = false;
         
         if (isProject && item.hours) {
             loggedHours = (item.hours.billableHours || 0) + (item.hours.nonBillableHours || 0);
@@ -676,6 +677,9 @@ class Dashboard {
             // Look for budget in custom fields or use known project budgets
             totalHours = this.getProjectBudget(item.id, item.title, loggedHours);
             percentage = totalHours > 0 ? (loggedHours / totalHours) * 100 : 0;
+            
+            // Check if budget seems suspicious (likely calculated fallback)
+            isBudgetSuspicious = this.isProjectBudgetSuspicious(item.id, item.title, loggedHours, totalHours);
         } else if (!isProject && item.usage) {
             loggedHours = item.usage.timeUsed || 0;
             totalHours = item.usage.timeAllowance || 0;
@@ -762,6 +766,7 @@ class Dashboard {
                         <span class="compact-hours-logged">${formatHours(loggedHours)}</span>
                         <span class="compact-hours-separator">/</span>
                         <span class="compact-hours-total">${formatHours(totalHours)}</span>
+                        ${isBudgetSuspicious ? '<span class="budget-warning" title="Budget may be estimated. Consider setting actual project budget.">⚠️</span>' : ''}
                     </div>
                 </div>
                 
@@ -788,15 +793,15 @@ class Dashboard {
     }
 
     /**
-     * Get project budget/maximum hours - this handles known project budgets
-     * In a real implementation, this would come from custom fields, quotes, or budgets API
+     * Get project budget/maximum hours with better fallback handling
      */
     getProjectBudget(projectId, projectTitle, loggedHours) {
         // Known project budgets based on user's data
         const knownBudgets = {
             '415': 200, // PGG002 - 200h budget
             '423': 40,  // DLF - 40h budget  
-            '268': 572, // Mussels App - 572h budget
+            '268': 572, // Mussels App - 572h budget (confirmed from Project Plan)
+            '352': 80,  // LMS Feature Requests Q1 2025 - 80h budget
         };
         
         // Check by ID first
@@ -804,24 +809,65 @@ class Dashboard {
             return knownBudgets[projectId];
         }
         
-        // Check by title patterns
-        if (projectTitle && projectTitle.includes('PGG002')) {
+        // Check by title patterns for known projects
+        const titleLower = (projectTitle || '').toLowerCase();
+        
+        if (titleLower.includes('pgg002') || titleLower.includes('backlog development')) {
             return 200;
         }
-        if (projectTitle && projectTitle.includes('DLF')) {
+        if (titleLower.includes('dlf') || titleLower.includes('tenant migration')) {
             return 40;
         }
-        if (projectTitle && projectTitle.includes('Mussels App')) {
+        if (titleLower.includes('mussels app')) {
             return 572;
         }
-        
-        // For unknown projects, use a reasonable default based on logged hours
-        if (loggedHours > 0) {
-            // Assume budget is 20% more than logged hours, minimum 40h
-            return Math.max(Math.ceil(loggedHours * 1.2), 40);
+        if (titleLower.includes('lms feature requests')) {
+            return 80;
         }
         
-        return 100; // Default fallback
+        // For unknown projects, implement a smarter fallback system
+        if (loggedHours > 0) {
+            // Instead of arbitrary 120%, use different strategies based on logged hours
+            if (loggedHours < 10) {
+                // Small projects: assume 20-40h budget
+                return Math.max(Math.ceil(loggedHours * 2), 20);
+            } else if (loggedHours < 50) {
+                // Medium projects: assume 10-25% buffer
+                return Math.ceil(loggedHours * 1.15);
+            } else if (loggedHours < 100) {
+                // Large projects: assume 5-15% buffer
+                return Math.ceil(loggedHours * 1.1);
+            } else {
+                // Very large projects: assume 5-10% buffer
+                return Math.ceil(loggedHours * 1.05);
+            }
+        }
+        
+        // Final fallback - return a reasonable default based on company/project patterns
+        return 40; // Conservative default for new projects
+    }
+
+    /**
+     * Check if a project budget should be flagged as potentially incorrect
+     */
+    isProjectBudgetSuspicious(projectId, projectTitle, loggedHours, budgetHours) {
+        // Known projects shouldn't be flagged
+        const knownBudgets = {
+            '415': 200, '423': 40, '268': 572, '352': 80
+        };
+        
+        if (knownBudgets[projectId]) {
+            return false;
+        }
+        
+        // Flag if logged hours are significantly over budget and budget seems calculated
+        const usagePercentage = (loggedHours / budgetHours) * 100;
+        const seemsCalculated = budgetHours === Math.ceil(loggedHours * 1.2) || 
+                               budgetHours === Math.ceil(loggedHours * 1.15) ||
+                               budgetHours === Math.ceil(loggedHours * 1.1) ||
+                               budgetHours === Math.ceil(loggedHours * 1.05);
+        
+        return usagePercentage > 90 && seemsCalculated;
     }
 
     /**

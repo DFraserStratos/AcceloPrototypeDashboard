@@ -297,6 +297,18 @@
     color: var(--text-secondary);
 }
 
+.budget-warning {
+    margin-left: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    opacity: 0.8;
+    cursor: help;
+    transition: opacity 0.2s ease;
+}
+
+.budget-warning:hover {
+    opacity: 1;
+}
+
 /* Compact Progress Percentage */
 .compact-percentage {
     font-size: var(--font-size-base);
