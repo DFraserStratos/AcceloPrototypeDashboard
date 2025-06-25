@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Starting Accelo API Dashboard..."
+echo "🚀 Starting Orbit Dashboard..."
 echo ""
 
 # Check if node is installed

@@ -1,6 +1,6 @@
-# Accelo API Dashboard
+# Orbit Dashboard
 
-A comprehensive dashboard application for Accelo that displays companies, projects, and agreements with real-time progress tracking.
+A modern project management dashboard application that integrates with Accelo to display companies, projects, and agreements with real-time progress tracking.
 
 ## Table of Contents
 - [Features](#features)
@@ -56,7 +56,7 @@ A comprehensive dashboard application for Accelo that displays companies, projec
 
 ### Architecture Overview
 
-This application uses a three-tier architecture to work around browser CORS restrictions and provide a secure integration with Accelo:
+Orbit uses a three-tier architecture to work around browser CORS restrictions and provide a secure integration with Accelo:
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -125,7 +125,7 @@ When a user clicks on a company:
 1. Log into your Accelo deployment as an administrator
 2. Navigate to **Configuration** → **API** → **Register Application**
 3. Fill in the form:
-   - **Application Name**: Your app name (e.g., "Dashboard Integration")
+   - **Application Name**: Your app name (e.g., "Orbit Dashboard Integration")
    - **Application Type**: Select "Service"
    - **Execute Application As**: Select which user the API should run as
 4. Save and copy the Client ID and Client Secret immediately
@@ -134,8 +134,8 @@ When a user clicks on a company:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/DFraserStratos/accelo-dashboard-prototype.git
-   cd accelo-dashboard-prototype
+   git clone https://github.com/DFraserStratos/orbit.git
+   cd orbit
    ```
 
 2. **Install dependencies**
@@ -585,7 +585,7 @@ This ensures accurate progress calculations that match Accelo's interface exactl
 ## Project Structure
 
 ```
-accelo-dashboard-prototype/
+orbit/
 ├── index.html              # Main dashboard HTML
 ├── settings.html           # Settings page HTML
 ├── server.js               # Express proxy server

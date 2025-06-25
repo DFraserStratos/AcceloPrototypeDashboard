@@ -1,15 +1,14 @@
 {
-  "name": "accelo-api-app",
+  "name": "orbit",
   "version": "1.0.0",
-  "description": "Comprehensive Accelo API Integration Dashboard",
+  "description": "Orbit - Modern Project Management Dashboard",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
   },
   "keywords": [
-    "accelo",
-    "api",
+    "orbit",
     "dashboard",
     "project-management"
   ],
