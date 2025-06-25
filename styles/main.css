@@ -2,6 +2,7 @@
 :root {
     /* Modern Color Palette */
     --primary-color: #3b82f6;
+    --primary-color-rgb: 59, 130, 246;
     --primary-hover: #2563eb;
     --primary-light: #dbeafe;
     --primary-dark: #1d4ed8;

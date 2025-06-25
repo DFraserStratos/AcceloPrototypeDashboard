@@ -601,14 +601,39 @@ class Dashboard {
         const layoutContainer = document.createElement('div');
         layoutContainer.className = 'company-grouped-layout';
         
-        Object.entries(companiesData).forEach(([companyId, data]) => {
-            const companyRow = document.createElement('div');
-            companyRow.className = 'company-row';
-            
-            // Create company block (left side)
+        // Get saved width preference
+        const savedWidth = localStorage.getItem('accelo_dashboard_company_width');
+        const companyWidth = savedWidth ? Math.min(Math.max(parseInt(savedWidth), 80), 300) : 120;
+        
+        // Set CSS custom property for all rows
+        document.documentElement.style.setProperty('--company-blocks-width', companyWidth + 'px');
+        
+        // Create main container with split layout
+        const mainSplitContainer = document.createElement('div');
+        mainSplitContainer.className = 'main-split-container';
+        
+        // Create left side (all company blocks)
+        const allCompanyBlocksSection = document.createElement('div');
+        allCompanyBlocksSection.className = 'all-company-blocks-section';
+        
+        // Create right side (all progress blocks)
+        const allProgressBlocksSection = document.createElement('div');
+        allProgressBlocksSection.className = 'all-progress-blocks-section';
+        
+        // Add all company blocks and progress blocks
+        Object.entries(companiesData).forEach(([companyId, data], index) => {
+            // Create company block
             const companyBlock = document.createElement('div');
             companyBlock.className = 'company-block';
             companyBlock.dataset.companyId = companyId;
+            companyBlock.dataset.companyIndex = index;
+            
+            // Calculate height based on number of progress items
+            const itemCount = data.items.length;
+            const progressBlockHeight = 50; // Base height of each progress block
+            const gapHeight = 8; // var(--spacing-xs)
+            const totalHeight = (progressBlockHeight * itemCount) + (gapHeight * (itemCount - 1));
+            companyBlock.style.height = `${totalHeight}px`;
             
             // Get saved color theme for potential use later
             const savedColors = UIComponents.getSavedCompanyColors();
@@ -627,23 +652,132 @@ class Dashboard {
                 </div>
             `;
             
-            // Create progress blocks container (right side)
-            const progressContainer = document.createElement('div');
-            progressContainer.className = 'progress-blocks-container';
+            allCompanyBlocksSection.appendChild(companyBlock);
             
-            // Add progress blocks for this company
+            // Create progress blocks container for this company
+            const companyProgressContainer = document.createElement('div');
+            companyProgressContainer.className = 'company-progress-container';
+            companyProgressContainer.dataset.companyIndex = index;
+            
+            // Add progress blocks for this specific company
             data.items.forEach(item => {
                 const block = this.createCompactProgressBlock(item);
-                progressContainer.appendChild(block);
+                companyProgressContainer.appendChild(block);
             });
             
-            companyRow.appendChild(companyBlock);
-            companyRow.appendChild(progressContainer);
-            layoutContainer.appendChild(companyRow);
+            allProgressBlocksSection.appendChild(companyProgressContainer);
         });
+        
+        // Create the single global resizer
+        const globalResizer = document.createElement('div');
+        globalResizer.className = 'global-split-resizer';
+        globalResizer.style.left = companyWidth + 'px'; // Set initial position
+        
+        mainSplitContainer.appendChild(allCompanyBlocksSection);
+        mainSplitContainer.appendChild(globalResizer);
+        mainSplitContainer.appendChild(allProgressBlocksSection);
+        layoutContainer.appendChild(mainSplitContainer);
+        
+        // Add global resize functionality
+        this.initializeGlobalResizer();
         
         contentGrid.innerHTML = '';
         contentGrid.appendChild(layoutContainer);
+        
+        // Update heights after rendering
+        setTimeout(() => this.updateCompanyBlockHeights(), 100);
+    }
+    
+    /**
+     * Update company block heights to match their corresponding progress containers
+     */
+    updateCompanyBlockHeights() {
+        const companyBlocks = document.querySelectorAll('.all-company-blocks-section .company-block');
+        const progressContainers = document.querySelectorAll('.all-progress-blocks-section .company-progress-container');
+        
+        companyBlocks.forEach((block, index) => {
+            const correspondingContainer = progressContainers[index];
+            if (correspondingContainer) {
+                const containerHeight = correspondingContainer.offsetHeight;
+                block.style.height = `${containerHeight}px`;
+            }
+        });
+    }
+
+    /**
+     * Initialize the global resizer functionality that affects all split panes
+     */
+    initializeGlobalResizer() {
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+        const minWidth = 80;
+        const maxWidth = 300;
+
+        const startResize = (e) => {
+            isResizing = true;
+            startX = e.clientX || e.touches[0].clientX;
+            startWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--company-blocks-width'), 10);
+            
+            // Add resizing class to the global resizer
+            document.querySelectorAll('.global-split-resizer').forEach(r => r.classList.add('resizing'));
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            
+            // Prevent text selection during drag
+            e.preventDefault();
+        };
+
+        const doResize = (e) => {
+            if (!isResizing) return;
+            
+            const clientX = e.clientX || e.touches[0].clientX;
+            const delta = clientX - startX;
+            const newWidth = Math.min(Math.max(startWidth + delta, minWidth), maxWidth);
+            
+            // Update CSS custom property globally
+            document.documentElement.style.setProperty('--company-blocks-width', newWidth + 'px');
+            
+            // Update resizer position
+            const resizer = document.querySelector('.global-split-resizer');
+            if (resizer) {
+                resizer.style.left = newWidth + 'px';
+            }
+            
+            // Save preference
+            localStorage.setItem('accelo_dashboard_company_width', newWidth);
+            
+            e.preventDefault();
+        };
+
+        const stopResize = () => {
+            if (!isResizing) return;
+            
+            isResizing = false;
+            document.querySelectorAll('.global-split-resizer').forEach(r => r.classList.remove('resizing'));
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        // Add event listeners to the global resizer
+        document.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('global-split-resizer')) {
+                startResize(e);
+            }
+        });
+
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+
+        // Touch events for mobile
+        document.addEventListener('touchstart', (e) => {
+            if (e.target.classList.contains('global-split-resizer')) {
+                startResize(e);
+            }
+        });
+
+        document.addEventListener('touchmove', doResize);
+        document.addEventListener('touchend', stopResize);
     }
     
     /**

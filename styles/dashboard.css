@@ -88,25 +88,99 @@
     width: 100%;
 }
 
-.company-row {
+/* Main Split Container */
+.main-split-container {
     display: flex;
-    align-items: stretch;
+    align-items: flex-start; /* Align items at the top */
     width: 100%;
-    margin-bottom: var(--spacing-md);
+    position: relative;
+    min-height: 100%;
+}
+
+.all-company-blocks-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md); /* Match the gap between progress containers */
+    min-width: 80px;
+    max-width: 300px;
+    width: var(--company-blocks-width, 120px);
+    flex-shrink: 0;
+    position: relative;
+    padding-right: 12px; /* Space for resizer */
+}
+
+.all-progress-blocks-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md); /* Same gap as company blocks */
+    margin-left: var(--spacing-sm);
+}
+
+.company-progress-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+/* Company blocks and progress containers are aligned using flexbox gap */
+
+/* Global Resizer Handle */
+.global-split-resizer {
+    position: absolute;
+    top: 0;
+    left: var(--company-blocks-width, 120px);
+    width: 12px;
+    height: 100%;
+    cursor: col-resize;
+    background: transparent;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 10;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateX(-50%);
+}
+
+.global-split-resizer::before {
+    content: '';
+    width: 2px;
+    height: 90%;
+    background: var(--primary-color);
+    border-radius: 1px;
+    opacity: 0.8;
+    box-shadow: 0 0 4px rgba(var(--primary-color-rgb), 0.3);
+}
+
+.company-grouped-layout:hover .global-split-resizer {
+    opacity: 1;
+}
+
+.global-split-resizer:hover {
+    background: rgba(var(--primary-color-rgb), 0.1);
+}
+
+.global-split-resizer:active {
+    background: rgba(var(--primary-color-rgb), 0.2);
+}
+
+.global-split-resizer.resizing {
+    opacity: 1;
+    background: rgba(var(--primary-color-rgb), 0.15);
 }
 
 /* Clean Company Block with Overlay Color Picker */
 .company-block {
-    width: 120px;
+    width: 100%;
     background: linear-gradient(135deg, var(--gray-600) 0%, var(--gray-700) 100%);
     border: 1px solid var(--gray-500);
     border-radius: var(--radius-md);
-    margin-right: var(--spacing-md);
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 50px;
-    flex-shrink: 0;
     box-shadow: var(--shadow-sm);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
@@ -181,7 +255,6 @@
 
 /* Compact Progress Blocks Container */
 .progress-blocks-container {
-    flex: 1;
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
