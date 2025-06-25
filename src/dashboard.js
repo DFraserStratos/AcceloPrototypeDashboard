@@ -565,9 +565,7 @@ class Dashboard {
      * Render company-grouped layout matching the user's mockup
      */
     renderCompanyGroupedLayout() {
-        const contentTitle = document.getElementById('contentTitle');
         const contentGrid = document.getElementById('contentGrid');
-        const contentActions = document.getElementById('contentActions');
         
         // Hide sidebar since we're using a different layout
         const sidebar = document.getElementById('sidebar');
@@ -576,11 +574,6 @@ class Dashboard {
         // Adjust main content to use full width
         const mainContent = document.querySelector('.main-content');
         mainContent.style.marginLeft = '0';
-        
-        contentTitle.textContent = 'Dashboard Name';
-        
-        // Hide content actions area since we only need the nav refresh button
-        contentActions.style.display = 'none';
         
         if (this.dashboardData.length === 0) {
             contentGrid.innerHTML = `
@@ -737,11 +730,12 @@ class Dashboard {
                         <div class="compact-block-title-section">
                             <div class="compact-block-title">${UIComponents.escapeHtml(title)}</div>
                         </div>
-                        <div class="compact-block-type-section">
-                            <div class="compact-block-type">${type === 'project' ? 'PROJECT' : 'AGREEMENT'}</div>
-                            ${periodInfo}
-                        </div>
                     </div>
+                </div>
+                
+                <div class="compact-block-type-section">
+                    <div class="compact-block-type">${type === 'project' ? 'PROJECT' : 'AGREEMENT'}</div>
+                    ${periodInfo}
                 </div>
                 
                 <div class="compact-hours-section">
@@ -750,8 +744,9 @@ class Dashboard {
                         <span class="compact-hours-separator">/</span>
                         <span class="compact-hours-total">${formatHours(totalHours)}</span>
                     </div>
-                    <div class="compact-percentage">${Math.round(percentage)}%</div>
                 </div>
+                
+                <div class="compact-percentage">${Math.round(percentage)}%</div>
                 
                 <div class="compact-progress-bar">
                     <div class="compact-progress-fill" style="width: ${Math.min(percentage, 100)}%"></div>
