@@ -630,45 +630,33 @@
 /* Compact Empty State */
 .empty-state {
     text-align: center;
-    padding: var(--spacing-xl);
-    background: linear-gradient(135deg, var(--surface-color) 0%, var(--background-secondary) 100%);
-    border-radius: var(--radius-lg);
-    border: 2px dashed var(--border-color);
-    transition: all 0.3s ease;
+    padding: var(--spacing-lg) var(--spacing-md);
+    color: var(--text-secondary);
 }
 
 .empty-state:hover {
-    border-color: var(--primary-color);
-    background: linear-gradient(135deg, var(--primary-light) 0%, var(--surface-color) 100%);
+    color: var(--text-secondary);
 }
 
 .empty-state-icon {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto var(--spacing-md);
-    background: linear-gradient(135deg, var(--secondary-light) 0%, var(--secondary-color) 100%);
-    border-radius: var(--radius-lg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-xl);
-    color: var(--text-inverse);
-    box-shadow: var(--shadow-xs);
+    font-size: 2rem;
+    color: var(--text-tertiary);
+    margin-bottom: var(--spacing-sm);
 }
 
 .empty-state-title {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-base);
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: var(--spacing-xs);
 }
 
 .empty-state-description {
-    color: var(--text-secondary);
     font-size: var(--font-size-sm);
-    line-height: var(--line-height-relaxed);
+    color: var(--text-secondary);
     max-width: 300px;
     margin: 0 auto;
+    line-height: 1.4;
 }
 
 /* Overview Dashboard */

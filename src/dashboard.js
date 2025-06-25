@@ -820,33 +820,74 @@ class Dashboard {
      */
     updateModalUI() {
         const modal = document.getElementById('addItemModal');
-        const modalHeader = modal.querySelector('.modal-header h2');
+        const modalContent = modal.querySelector('.modal');
         const searchInput = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
         const modalFooter = modal.querySelector('.modal-footer');
         
+        // Add close button if it doesn't exist
+        let closeBtn = modalContent.querySelector('.modal-close-btn');
+        if (!closeBtn) {
+            closeBtn = document.createElement('button');
+            closeBtn.className = 'modal-close-btn';
+            closeBtn.innerHTML = '<i class="fa-solid fa-times"></i>';
+            closeBtn.onclick = () => this.hideAddItemModal();
+            modalContent.appendChild(closeBtn);
+        }
+        
         if (this.modalStep === 1) {
             // Step 1: Select companies
-            modalHeader.textContent = 'Select Company';
+            const modalHeader = modalContent.querySelector('.modal-header');
+            modalHeader.innerHTML = `
+                <h2>Select Company</h2>
+            `;
             searchInput.placeholder = 'Search for companies...';
+            searchInput.style.display = 'block';
             
             modalFooter.innerHTML = `
-                <button class="btn btn-ghost" onclick="dashboard.hideAddItemModal()">Cancel</button>
-                <div class="modal-help-text">Click on a company to continue</div>
+                <div class="modal-footer-left">
+                    <div class="modal-help-text">
+                        <i class="fa-solid fa-lightbulb"></i>
+                        Click on a company to continue
+                    </div>
+                </div>
+                <div class="modal-footer-right">
+                    <button class="btn btn-ghost" onclick="dashboard.hideAddItemModal()">Cancel</button>
+                </div>
             `;
             
             this.renderCompanySearchResults(null);
             
         } else {
             // Step 2: Select projects/agreements
-            modalHeader.textContent = 'Select Projects & Agreements';
+            const modalHeader = modalContent.querySelector('.modal-header');
+            modalHeader.innerHTML = `
+                <h2>Select Projects & Agreements</h2>
+                <div class="selected-company-badge">
+                    <i class="fa-solid fa-building"></i>
+                    ${UIComponents.escapeHtml(this.selectedCompanies[0].name)}
+                </div>
+            `;
             searchInput.style.display = 'none'; // Hide search in step 2
             
+            const selectedCount = this.selectedItems.size;
             modalFooter.innerHTML = `
-                <button class="btn btn-ghost" onclick="dashboard.backToCompanySelection()">Back</button>
-                <button class="btn btn-primary" onclick="dashboard.addSelectedItems()">
-                    Add Selected Items
-                </button>
+                <div class="modal-footer-left">
+                    <div class="selection-counter">
+                        <i class="fa-solid fa-check-circle"></i>
+                        <span class="counter-text">${selectedCount} item${selectedCount !== 1 ? 's' : ''} selected</span>
+                    </div>
+                </div>
+                <div class="modal-footer-right">
+                    <button class="btn btn-ghost" onclick="dashboard.backToCompanySelection()">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        Back
+                    </button>
+                    <button class="btn btn-primary" onclick="dashboard.addSelectedItems()" ${selectedCount === 0 ? 'disabled' : ''}>
+                        <i class="fa-solid fa-plus"></i>
+                        Add Selected Items
+                    </button>
+                </div>
             `;
             
             this.renderItemSelectionUI();
@@ -872,11 +913,11 @@ class Dashboard {
             }
             
             try {
-                // Show loading state
+                // Show loading state - properly centered
                 document.getElementById('searchResults').innerHTML = `
-                    <div class="text-center p-3">
+                    <div class="search-loading">
                         <div class="spinner"></div>
-                        <p class="text-muted mt-2">Searching companies...</p>
+                        <p class="search-loading-text">Searching companies...</p>
                     </div>
                 `;
                 
@@ -887,8 +928,12 @@ class Dashboard {
             } catch (error) {
                 console.error('Search failed:', error);
                 document.getElementById('searchResults').innerHTML = `
-                    <div class="alert alert-error">
-                        Search failed: ${error.message}
+                    <div class="empty-state">
+                        <div class="empty-state-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="empty-state-title">Search Failed</div>
+                        <div class="empty-state-description">
+                            ${UIComponents.escapeHtml(error.message)}
+                        </div>
                     </div>
                 `;
             }
@@ -904,10 +949,10 @@ class Dashboard {
         if (!companies) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-state-icon"><i class="fa-solid fa-building"></i></div>
+                    <div class="empty-state-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
                     <div class="empty-state-title">Search for Companies</div>
                     <div class="empty-state-description">
-                        Type to search for companies in your Accelo account.
+                        Type at least 2 characters to search for companies in your Accelo account.
                     </div>
                 </div>
             `;
@@ -927,17 +972,45 @@ class Dashboard {
             return;
         }
         
-        container.innerHTML = '';
+        // Add results header
+        container.innerHTML = `
+            <div class="search-results-header">
+                <span class="results-count">${companies.length} company${companies.length !== 1 ? 'ies' : ''} found</span>
+            </div>
+            <div class="search-results-list"></div>
+        `;
+        
+        const resultsList = container.querySelector('.search-results-list');
         
         companies.forEach(company => {
-            const item = UIComponents.createSearchResultItem(company, 'company');
+            const item = document.createElement('div');
+            item.className = 'company-search-result';
+            
+            // Get company initials for icon
+            const initials = company.name
+                .split(' ')
+                .map(word => word[0])
+                .join('')
+                .substring(0, 2)
+                .toUpperCase();
+            
+            item.innerHTML = `
+                <div class="company-result-content">
+                    <div class="company-result-icon">
+                        <span class="company-initials">${initials}</span>
+                    </div>
+                    <div class="company-result-info">
+                        <div class="company-result-name">${UIComponents.escapeHtml(company.name)}</div>
+                        <div class="company-result-type">Company</div>
+                    </div>
+                    <div class="company-result-action">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </div>
+                </div>
+            `;
             
             // Add click handler to immediately proceed to step 2
             item.addEventListener('click', async () => {
-                // Add visual feedback
-                item.style.opacity = '0.7';
-                item.style.pointerEvents = 'none';
-                
                 // Set this company as selected
                 this.selectedCompanies = [company];
                 
@@ -945,7 +1018,19 @@ class Dashboard {
                 await this.proceedToItemSelection();
             });
             
-            container.appendChild(item);
+            // Add keyboard navigation
+            item.setAttribute('tabindex', '0');
+            item.setAttribute('role', 'button');
+            item.setAttribute('aria-label', `Select ${company.name}`);
+            
+            item.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    item.click();
+                }
+            });
+            
+            resultsList.appendChild(item);
         });
     }
     
@@ -959,7 +1044,13 @@ class Dashboard {
         }
         
         try {
-            UIComponents.showLoading();
+            // Show loading state in the search results area
+            document.getElementById('searchResults').innerHTML = `
+                <div class="search-loading">
+                    <div class="spinner"></div>
+                    <p class="search-loading-text">Loading projects and agreements...</p>
+                </div>
+            `;
             
             // Get projects and agreements for selected companies
             const companyIds = this.selectedCompanies.map(c => c.id);
@@ -971,9 +1062,17 @@ class Dashboard {
             
         } catch (error) {
             console.error('Failed to load items:', error);
+            // Show error state in the search results area
+            document.getElementById('searchResults').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="empty-state-title">Failed to Load Items</div>
+                    <div class="empty-state-description">
+                        ${UIComponents.escapeHtml(error.message)}
+                    </div>
+                </div>
+            `;
             UIComponents.showToast('Failed to load items: ' + error.message, 'error');
-        } finally {
-            UIComponents.hideLoading();
         }
     }
     
@@ -996,10 +1095,10 @@ class Dashboard {
         if (this.availableItems.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-state-icon"><i class="fa-solid fa-clipboard"></i></div>
-                    <div class="empty-state-title">No Items Found</div>
+                    <div class="empty-state-icon"><i class="fa-solid fa-inbox"></i></div>
+                    <div class="empty-state-title">No Items Available</div>
                     <div class="empty-state-description">
-                        The selected companies have no active projects or agreements.
+                        ${UIComponents.escapeHtml(this.selectedCompanies[0].name)} has no active projects or agreements.
                     </div>
                 </div>
             `;
@@ -1008,32 +1107,111 @@ class Dashboard {
         
         container.innerHTML = '';
         
+        // Count total items
+        let totalProjects = 0;
+        let totalAgreements = 0;
+        this.availableItems.forEach(companyData => {
+            totalProjects += companyData.projects.length;
+            totalAgreements += companyData.agreements.length;
+        });
+        
+        // Add header with item counts
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'items-selection-header';
+        headerDiv.innerHTML = `
+            <div class="items-count-summary">
+                <div class="count-item">
+                    <i class="fa-solid fa-diagram-project"></i>
+                    <span>${totalProjects} Project${totalProjects !== 1 ? 's' : ''}</span>
+                </div>
+                <div class="count-item">
+                    <i class="fa-solid fa-file-contract"></i>
+                    <span>${totalAgreements} Agreement${totalAgreements !== 1 ? 's' : ''}</span>
+                </div>
+            </div>
+            <div class="selection-actions">
+                <button class="btn btn-sm btn-ghost" onclick="dashboard.selectAllItems()">
+                    <i class="fa-solid fa-check-double"></i>
+                    Select All
+                </button>
+                <button class="btn btn-sm btn-ghost" onclick="dashboard.clearAllItems()">
+                    <i class="fa-solid fa-times"></i>
+                    Clear All
+                </button>
+            </div>
+        `;
+        container.appendChild(headerDiv);
+        
         // Group items by company
         this.availableItems.forEach(companyData => {
             const companySection = document.createElement('div');
             companySection.className = 'item-selection-company';
             
-            companySection.innerHTML = `
-                <h3 class="company-section-title">${UIComponents.escapeHtml(companyData.company.name)}</h3>
-                <div class="company-items"></div>
-            `;
+            // Only show company header if there are multiple companies (future-proofing)
+            if (this.selectedCompanies.length > 1) {
+                const companyHeader = document.createElement('div');
+                companyHeader.className = 'company-section-header';
+                companyHeader.innerHTML = `
+                    <div class="company-section-title">
+                        <i class="fa-solid fa-building"></i>
+                        ${UIComponents.escapeHtml(companyData.company.name)}
+                    </div>
+                `;
+                companySection.appendChild(companyHeader);
+            }
             
-            const itemsContainer = companySection.querySelector('.company-items');
+            const itemsContainer = document.createElement('div');
+            itemsContainer.className = 'company-items';
             
-            // Add projects
-            companyData.projects.forEach(project => {
-                const item = this.createSelectableItem(project, 'project');
-                itemsContainer.appendChild(item);
-            });
+            // Add projects first
+            if (companyData.projects.length > 0) {
+                const projectsGroup = document.createElement('div');
+                projectsGroup.className = 'items-group';
+                projectsGroup.innerHTML = `
+                    <div class="items-group-header">
+                        <h4 class="items-group-title">
+                            <i class="fa-solid fa-diagram-project"></i>
+                            Projects (${companyData.projects.length})
+                        </h4>
+                    </div>
+                    <div class="items-group-content"></div>
+                `;
+                
+                const projectsContainer = projectsGroup.querySelector('.items-group-content');
+                companyData.projects.forEach(project => {
+                    const item = this.createSelectableItem(project, 'project');
+                    projectsContainer.appendChild(item);
+                });
+                
+                itemsContainer.appendChild(projectsGroup);
+            }
             
             // Add agreements
-            companyData.agreements.forEach(agreement => {
-                const item = this.createSelectableItem(agreement, 'agreement');
-                itemsContainer.appendChild(item);
-            });
+            if (companyData.agreements.length > 0) {
+                const agreementsGroup = document.createElement('div');
+                agreementsGroup.className = 'items-group';
+                agreementsGroup.innerHTML = `
+                    <div class="items-group-header">
+                        <h4 class="items-group-title">
+                            <i class="fa-solid fa-file-contract"></i>
+                            Agreements (${companyData.agreements.length})
+                        </h4>
+                    </div>
+                    <div class="items-group-content"></div>
+                `;
+                
+                const agreementsContainer = agreementsGroup.querySelector('.items-group-content');
+                companyData.agreements.forEach(agreement => {
+                    const item = this.createSelectableItem(agreement, 'agreement');
+                    agreementsContainer.appendChild(item);
+                });
+                
+                itemsContainer.appendChild(agreementsGroup);
+            }
             
             // Only add section if it has items
             if (itemsContainer.children.length > 0) {
+                companySection.appendChild(itemsContainer);
                 container.appendChild(companySection);
             }
         });
@@ -1048,31 +1226,168 @@ class Dashboard {
         div.dataset.id = item.id;
         div.dataset.type = type;
         
-        const icon = type === 'project' ? '<i class="fa-solid fa-diagram-project"></i>' : '<i class="fa-solid fa-file-contract"></i>';
+        const icon = type === 'project' ? 'fa-diagram-project' : 'fa-file-contract';
         const title = item.title || item.name;
+        const itemKey = `${type}-${item.id}`;
+        const isSelected = this.selectedItems.has(itemKey);
+        
+        // Format additional info
+        let additionalInfo = '';
+        if (type === 'project') {
+            if (item.status) {
+                additionalInfo = `Status: ${item.status}`;
+            }
+            if (item.date_due) {
+                const dueDate = UIComponents.formatDate(item.date_due);
+                additionalInfo += additionalInfo ? ` • Due: ${dueDate}` : `Due: ${dueDate}`;
+            }
+        } else if (type === 'agreement') {
+            if (item.retainer_type) {
+                additionalInfo = `Type: ${item.retainer_type}`;
+            }
+        }
         
         div.innerHTML = `
             <div class="selectable-item-content">
-                <div class="selectable-item-icon">${icon}</div>
+                <div class="selection-checkbox">
+                    <input type="checkbox" id="item-${itemKey}" ${isSelected ? 'checked' : ''}>
+                    <label for="item-${itemKey}" class="checkbox-label">
+                        <i class="fa-solid fa-check"></i>
+                    </label>
+                </div>
+                <div class="selectable-item-icon">
+                    <i class="fa-solid ${icon}"></i>
+                </div>
                 <div class="selectable-item-info">
                     <div class="selectable-item-title">${UIComponents.escapeHtml(title)}</div>
-                    <div class="selectable-item-type">${type === 'project' ? 'Project' : 'Agreement'}</div>
+                    <div class="selectable-item-meta">
+                        <span class="item-type-badge ${type}">${type === 'project' ? 'Project' : 'Agreement'}</span>
+                        ${additionalInfo ? `<span class="item-additional-info">${UIComponents.escapeHtml(additionalInfo)}</span>` : ''}
+                    </div>
                 </div>
             </div>
         `;
         
-        div.addEventListener('click', () => {
-            div.classList.toggle('selected');
+        const checkbox = div.querySelector('input[type="checkbox"]');
+        
+        const toggleSelection = () => {
+            const isNowSelected = !this.selectedItems.has(itemKey);
             
-            const itemKey = `${type}-${item.id}`;
-            if (div.classList.contains('selected')) {
+            if (isNowSelected) {
                 this.selectedItems.add(itemKey);
+                div.classList.add('selected');
+                checkbox.checked = true;
             } else {
                 this.selectedItems.delete(itemKey);
+                div.classList.remove('selected');
+                checkbox.checked = false;
+            }
+            
+            // Update the selection counter in real-time
+            this.updateSelectionCounter();
+        };
+        
+        // Handle clicks on the entire item
+        div.addEventListener('click', (e) => {
+            // Don't double-trigger if clicking directly on checkbox
+            if (e.target.type !== 'checkbox') {
+                toggleSelection();
             }
         });
         
+        // Handle checkbox changes
+        checkbox.addEventListener('change', toggleSelection);
+        
+        // Add keyboard navigation
+        div.setAttribute('tabindex', '0');
+        div.setAttribute('role', 'checkbox');
+        div.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+        div.setAttribute('aria-label', `${type === 'project' ? 'Project' : 'Agreement'}: ${title}`);
+        
+        div.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleSelection();
+            }
+        });
+        
+        // Set initial state
+        if (isSelected) {
+            div.classList.add('selected');
+        }
+        
         return div;
+    }
+    
+    /**
+     * Update selection counter in modal footer
+     */
+    updateSelectionCounter() {
+        const counter = document.querySelector('.selection-counter .counter-text');
+        const addButton = document.querySelector('.modal-footer .btn-primary');
+        
+        if (counter) {
+            const selectedCount = this.selectedItems.size;
+            counter.textContent = `${selectedCount} item${selectedCount !== 1 ? 's' : ''} selected`;
+            
+            // Update button state
+            if (addButton) {
+                addButton.disabled = selectedCount === 0;
+            }
+        }
+    }
+    
+    /**
+     * Select all available items
+     */
+    selectAllItems() {
+        // Clear current selection
+        this.selectedItems.clear();
+        
+        // Add all items
+        this.availableItems.forEach(companyData => {
+            companyData.projects.forEach(project => {
+                this.selectedItems.add(`project-${project.id}`);
+            });
+            companyData.agreements.forEach(agreement => {
+                this.selectedItems.add(`agreement-${agreement.id}`);
+            });
+        });
+        
+        // Update UI
+        this.updateSelectionUI();
+        this.updateSelectionCounter();
+    }
+    
+    /**
+     * Clear all selected items 
+     */
+    clearAllItems() {
+        this.selectedItems.clear();
+        this.updateSelectionUI();
+        this.updateSelectionCounter();
+    }
+    
+    /**
+     * Update selection UI for all items
+     */
+    updateSelectionUI() {
+        document.querySelectorAll('.selectable-item').forEach(item => {
+            const type = item.dataset.type;
+            const id = item.dataset.id;
+            const itemKey = `${type}-${id}`;
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            
+            if (this.selectedItems.has(itemKey)) {
+                item.classList.add('selected');
+                checkbox.checked = true;
+                item.setAttribute('aria-checked', 'true');
+            } else {
+                item.classList.remove('selected');
+                checkbox.checked = false;
+                item.setAttribute('aria-checked', 'false');
+            }
+        });
     }
     
     /**
