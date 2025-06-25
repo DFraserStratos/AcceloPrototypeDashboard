@@ -105,7 +105,7 @@
 .all-company-blocks-section {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md); /* Match the gap between progress containers */
+    gap: var(--spacing-lg); /* Increased gap for better readability between companies */
     min-width: 80px;
     max-width: 300px;
     width: var(--company-blocks-width, 120px);
@@ -118,7 +118,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md); /* Same gap as company blocks */
+    gap: var(--spacing-lg); /* Same gap as company blocks for alignment */
     margin-left: var(--spacing-sm);
 }
 
