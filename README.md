@@ -22,6 +22,7 @@ A comprehensive dashboard application for Accelo that displays companies, projec
 ## Features
 
 - **Company-Grouped Layout**: Organized view with company blocks on the left and their related progress items on the right
+- **Drag & Drop Interface**: Reorder progress blocks within companies and reorder companies themselves
 - **Compact Progress Tracking**: View up to 10+ projects and agreements on screen simultaneously
 - **Project Tracking**: Monitor project hours (billable and non-billable) with visual progress bars
 - **Agreement Management**: Track agreement usage and allowances with percentage indicators
@@ -31,6 +32,7 @@ A comprehensive dashboard application for Accelo that displays companies, projec
 - **Secure Authentication**: Service Application OAuth 2.0 with 30-day tokens
 - **Real-time Updates**: Automatic data refresh with caching
 - **Responsive Design**: Works on desktop and tablet devices
+- **Persistent Layout**: Dashboard order and configuration saved to localStorage
 
 ## Screenshots
 
@@ -198,6 +200,31 @@ The dashboard features a company-grouped layout with two main areas:
 1. All added projects and agreements are visible simultaneously
 2. Items are organized in rows by company (company block + progress blocks)
 3. Company blocks on the left adjust height to match their content
+
+### Drag & Drop Functionality
+
+#### Reordering Progress Blocks
+- **Within Same Company**: Drag any progress block (project or agreement) to reorder it within its company
+- **Visual Feedback**: 
+  - Insertion marker shows exactly where the item will be placed
+  - Only the source company's drop zone is highlighted
+  - Items become semi-transparent while dragging
+- **Restrictions**: Progress blocks cannot be moved between different companies
+- **Persistence**: New order is automatically saved and maintained across page refreshes
+
+#### Reordering Companies
+- **Company Blocks**: Drag company blocks to reorder the entire company sections
+- **Associated Items**: When a company is moved, all its progress blocks move with it
+- **Visual Feedback**: 
+  - Company blocks show dragging state with reduced opacity
+  - Insertion marker indicates drop position
+- **Auto-Adjustment**: Company block heights automatically adjust after reordering
+
+#### Interaction Details
+- **Grab Cursor**: Hover over draggable elements to see grab cursor
+- **Drop Zones**: Only valid drop areas are highlighted during drag
+- **Warning Messages**: Attempting invalid moves (like cross-company transfers) shows a warning toast
+- **Smooth Animations**: All movements include smooth transitions for better user experience
 4. Progress blocks show compact, essential information in a single row
 5. No company selection required - everything is always visible
 
@@ -756,9 +783,8 @@ Check terminal for:
 ### UI Limitations
 
 1. **Desktop Only**: Limited mobile responsiveness
-2. **No Drag & Drop**: Cannot reorder companies
-3. **No Filtering**: Cannot filter projects by status
-4. **Fixed Metrics**: Cannot customize displayed data
+2. **No Filtering**: Cannot filter projects by status
+3. **Fixed Metrics**: Cannot customize displayed data
 
 ## Recent Updates
 

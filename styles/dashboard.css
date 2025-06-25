@@ -1114,3 +1114,186 @@
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
 }
+
+/* Drag and Drop Styles */
+.draggable {
+    cursor: move;
+}
+
+/* Dragging state */
+.dragging {
+    opacity: 0.5;
+    cursor: grabbing !important;
+}
+
+/* Company block drag states */
+.company-block {
+    cursor: grab;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.company-block:active {
+    cursor: grabbing;
+}
+
+.company-block.dragging {
+    opacity: 0.4;
+    transform: scale(0.98);
+}
+
+/* Progress block drag states */
+.compact-progress-block {
+    cursor: grab;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.compact-progress-block:active {
+    cursor: grabbing;
+}
+
+.compact-progress-block.dragging {
+    opacity: 0.4;
+    transform: scale(0.98);
+}
+
+/* Drop zone indicators */
+.drop-zone-active {
+    position: relative;
+}
+
+.progress-blocks-container.drop-zone-active {
+    background: rgba(var(--primary-color-rgb), 0.05);
+    border-radius: var(--radius-md);
+    min-height: 60px;
+}
+
+.all-company-blocks-section.drop-zone-active {
+    background: rgba(var(--primary-color-rgb), 0.05);
+    border-radius: var(--radius-md);
+}
+
+/* Drop zone hover state */
+.drop-zone-hover {
+    background: rgba(var(--primary-color-rgb), 0.1) !important;
+    box-shadow: inset 0 0 0 2px rgba(var(--primary-color-rgb), 0.3);
+}
+
+/* Insertion marker */
+.drag-insert-marker {
+    height: 3px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        var(--primary-color) 20%, 
+        var(--primary-color) 80%, 
+        transparent 100%);
+    margin: 4px 0;
+    border-radius: 2px;
+    position: relative;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.drag-insert-marker::before,
+.drag-insert-marker::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: var(--primary-color);
+    border-radius: 50%;
+}
+
+.drag-insert-marker::before {
+    left: 0;
+}
+
+.drag-insert-marker::after {
+    right: 0;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.6;
+        transform: scaleX(0.95);
+    }
+    50% {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+}
+
+/* Empty drop zones */
+.progress-blocks-container:empty {
+    min-height: 60px;
+    border: 2px dashed var(--border-light);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.progress-blocks-container:empty::before {
+    content: 'Drop items here';
+    color: var(--text-tertiary);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.progress-blocks-container:empty.drop-zone-hover::before {
+    opacity: 1;
+}
+
+/* Prevent text selection during drag */
+.dragging * {
+    user-select: none !important;
+}
+
+body.dragging {
+    user-select: none !important;
+}
+
+/* Smooth transitions for reordering */
+.compact-progress-block:not(.dragging) {
+    transition: transform 0.2s ease;
+}
+
+.company-block:not(.dragging) {
+    transition: transform 0.2s ease, height 0.3s ease;
+}
+
+/* Visual feedback for valid/invalid drops */
+.drop-invalid {
+    cursor: not-allowed;
+}
+
+.drop-valid {
+    cursor: copy;
+}
+
+/* Invalid drop zone - for cross-company attempts */
+.drop-zone-invalid {
+    cursor: not-allowed !important;
+}
+
+.drop-zone-invalid::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(239, 68, 68, 0.1);
+    border: 2px dashed rgba(239, 68, 68, 0.3);
+    border-radius: var(--radius-md);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Responsive drag and drop */
+@media (max-width: 768px) {
+    .compact-progress-block,
+    .company-block {
+        touch-action: none; /* Enable touch dragging */
+    }
+}

@@ -13,6 +13,18 @@ class Dashboard {
         this.modalStep = 1; // 1 = select companies, 2 = select projects/agreements
         this.selectedCompanies = [];
         this.availableItems = []; // projects/agreements from selected companies
+        
+        // Drag and drop state
+        this.dragState = {
+            isDragging: false,
+            draggedElement: null,
+            draggedData: null,
+            draggedType: null, // 'progress' or 'company'
+            sourceCompanyId: null,
+            sourceIndex: null,
+            dropTargets: [],
+            currentDropTarget: null
+        };
     }
     
     /**
@@ -80,6 +92,9 @@ class Dashboard {
         
         // Escape key
         document.addEventListener('keydown', this.eventHandlers.escapeKey);
+        
+        // Set up drag and drop event delegation
+        this.setupDragAndDrop();
     }
     
     /**
@@ -90,6 +105,583 @@ class Dashboard {
             document.getElementById('addItemModal').removeEventListener('click', this.eventHandlers.modalClick);
             document.removeEventListener('keydown', this.eventHandlers.escapeKey);
         }
+        
+        // Clean up drag and drop listeners
+        this.cleanupDragAndDrop();
+    }
+    
+    /**
+     * Set up drag and drop functionality
+     */
+    setupDragAndDrop() {
+        // Use event delegation on the main content area
+        const mainContent = document.getElementById('mainContent');
+        
+        // Drag events for progress blocks and company blocks
+        mainContent.addEventListener('dragstart', this.handleDragStart.bind(this));
+        mainContent.addEventListener('dragend', this.handleDragEnd.bind(this));
+        mainContent.addEventListener('dragover', this.handleDragOver.bind(this));
+        mainContent.addEventListener('drop', this.handleDrop.bind(this));
+        mainContent.addEventListener('dragenter', this.handleDragEnter.bind(this));
+        mainContent.addEventListener('dragleave', this.handleDragLeave.bind(this));
+    }
+    
+    /**
+     * Clean up drag and drop event listeners
+     */
+    cleanupDragAndDrop() {
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) {
+            mainContent.removeEventListener('dragstart', this.handleDragStart);
+            mainContent.removeEventListener('dragend', this.handleDragEnd);
+            mainContent.removeEventListener('dragover', this.handleDragOver);
+            mainContent.removeEventListener('drop', this.handleDrop);
+            mainContent.removeEventListener('dragenter', this.handleDragEnter);
+            mainContent.removeEventListener('dragleave', this.handleDragLeave);
+        }
+    }
+    
+    /**
+     * Handle drag start event
+     */
+    handleDragStart(e) {
+        const progressBlock = e.target.closest('.compact-progress-block');
+        const companyBlock = e.target.closest('.company-block');
+        
+        if (progressBlock && progressBlock.hasAttribute('draggable')) {
+            // Dragging a progress block
+            this.startProgressBlockDrag(e, progressBlock);
+        } else if (companyBlock && companyBlock.hasAttribute('draggable')) {
+            // Dragging a company block
+            this.startCompanyBlockDrag(e, companyBlock);
+        }
+    }
+    
+    /**
+     * Start dragging a progress block
+     */
+    startProgressBlockDrag(e, progressBlock) {
+        this.dragState.isDragging = true;
+        this.dragState.draggedElement = progressBlock;
+        this.dragState.draggedType = 'progress';
+        
+        // Get the data for this block
+        const projectId = progressBlock.dataset.projectId;
+        const agreementId = progressBlock.dataset.agreementId;
+        const itemId = projectId || agreementId;
+        const itemType = projectId ? 'project' : 'agreement';
+        
+        // Find the item in our data (compare as strings to handle both string and number IDs)
+        const item = this.dashboardData.find(d => 
+            String(d.id) === String(itemId) && d.type === itemType
+        );
+        
+
+        
+        if (item) {
+            this.dragState.draggedData = item;
+            this.dragState.sourceCompanyId = item.company_id || (item.company_info ? item.company_info.id : null);
+            this.dragState.sourceIndex = this.dashboardData.indexOf(item);
+            
+            // Set drag data
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', JSON.stringify({
+                type: 'progress',
+                itemType: itemType,
+                itemId: itemId,
+                companyId: item.company_id
+            }));
+            
+            // Add dragging class
+            progressBlock.classList.add('dragging');
+            
+            // Create custom drag image
+            this.createDragPreview(e, progressBlock);
+            
+            // Highlight valid drop zones
+            this.highlightDropZones('progress');
+        } else {
+            console.error('Could not find item in dashboardData:', {
+                itemId,
+                itemType,
+                dashboardData: this.dashboardData
+            });
+        }
+    }
+    
+    /**
+     * Start dragging a company block
+     */
+    startCompanyBlockDrag(e, companyBlock) {
+        this.dragState.isDragging = true;
+        this.dragState.draggedElement = companyBlock;
+        this.dragState.draggedType = 'company';
+        
+        const companyId = parseInt(companyBlock.dataset.companyId);
+        this.dragState.draggedData = { companyId };
+        
+        // Set drag data
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', JSON.stringify({
+            type: 'company',
+            companyId: companyId
+        }));
+        
+        // Add dragging class
+        companyBlock.classList.add('dragging');
+        
+        // Create custom drag image
+        this.createDragPreview(e, companyBlock);
+        
+        // Highlight valid drop zones
+        this.highlightDropZones('company');
+    }
+    
+    /**
+     * Create a custom drag preview
+     */
+    createDragPreview(e, element) {
+        // Clone the element for the drag image
+        const dragImage = element.cloneNode(true);
+        dragImage.style.position = 'absolute';
+        dragImage.style.top = '-1000px';
+        dragImage.style.opacity = '0.8';
+        dragImage.style.transform = 'rotate(2deg)';
+        document.body.appendChild(dragImage);
+        
+        // Set as drag image
+        e.dataTransfer.setDragImage(dragImage, e.offsetX, e.offsetY);
+        
+        // Remove after a short delay
+        setTimeout(() => {
+            document.body.removeChild(dragImage);
+        }, 0);
+    }
+    
+    /**
+     * Highlight valid drop zones
+     */
+    highlightDropZones(dragType) {
+        if (dragType === 'progress') {
+            // Only highlight the progress container for the same company
+            const sourceCompanyId = this.dragState.sourceCompanyId || 
+                                   (this.dragState.draggedData?.company_id) || 
+                                   (this.dragState.draggedData?.company_info?.id);
+            
+            if (sourceCompanyId) {
+                // Find the company block with this ID
+                const companyBlock = document.querySelector(`.company-block[data-company-id="${sourceCompanyId}"]`);
+                if (companyBlock) {
+                    // Get its index
+                    const companyIndex = companyBlock.dataset.companyIndex;
+                    // Find the corresponding progress container
+                    const progressContainer = document.querySelector(`.company-progress-container[data-company-index="${companyIndex}"] .progress-blocks-container`);
+                    if (progressContainer) {
+                        progressContainer.classList.add('drop-zone-active');
+                    }
+                }
+            }
+        } else if (dragType === 'company') {
+            // Highlight company blocks section
+            const companySection = document.querySelector('.all-company-blocks-section');
+            if (companySection) {
+                companySection.classList.add('drop-zone-active');
+            }
+        }
+    }
+    
+    /**
+     * Handle drag over event
+     */
+    handleDragOver(e) {
+        if (!this.dragState.isDragging) return;
+        
+        e.preventDefault(); // Allow drop
+        e.dataTransfer.dropEffect = 'move';
+        
+        if (this.dragState.draggedType === 'progress') {
+            this.handleProgressBlockDragOver(e);
+        } else if (this.dragState.draggedType === 'company') {
+            this.handleCompanyBlockDragOver(e);
+        }
+    }
+    
+    /**
+     * Handle progress block drag over
+     */
+    handleProgressBlockDragOver(e) {
+        const container = e.target.closest('.progress-blocks-container');
+        if (!container) return;
+        
+        // Check if this is the correct company's container
+        const progressContainer = container.closest('.company-progress-container');
+        if (!progressContainer) return;
+        
+        const containerIndex = progressContainer.dataset.companyIndex;
+        const companyBlocks = document.querySelectorAll('.company-block');
+        const companyBlock = companyBlocks[containerIndex];
+        
+        if (!companyBlock) return;
+        
+        const targetCompanyId = companyBlock.dataset.companyId;
+        const sourceCompanyId = this.dragState.sourceCompanyId || 
+                               (this.dragState.draggedData?.company_id) || 
+                               (this.dragState.draggedData?.company_info?.id);
+        
+        // Only show insertion marker if it's the same company
+        if (String(sourceCompanyId) !== String(targetCompanyId)) {
+            return;
+        }
+        
+        // Find the closest progress block to show insertion point
+        const afterElement = this.getDragAfterElement(container, e.clientY);
+        const insertMarker = this.getOrCreateInsertMarker();
+        
+        if (afterElement == null) {
+            container.appendChild(insertMarker);
+        } else {
+            container.insertBefore(insertMarker, afterElement);
+        }
+    }
+    
+    /**
+     * Handle company block drag over
+     */
+    handleCompanyBlockDragOver(e) {
+        const container = e.target.closest('.all-company-blocks-section');
+        if (!container) return;
+        
+        // Find the closest company block to show insertion point
+        const afterElement = this.getDragAfterElement(container, e.clientY, '.company-block');
+        const insertMarker = this.getOrCreateInsertMarker();
+        
+        if (afterElement == null) {
+            container.appendChild(insertMarker);
+        } else {
+            container.insertBefore(insertMarker, afterElement);
+        }
+    }
+    
+    /**
+     * Get or create insertion marker
+     */
+    getOrCreateInsertMarker() {
+        let marker = document.getElementById('drag-insert-marker');
+        if (!marker) {
+            marker = document.createElement('div');
+            marker.id = 'drag-insert-marker';
+            marker.className = 'drag-insert-marker';
+        }
+        return marker;
+    }
+    
+    /**
+     * Get the element after which to insert
+     */
+    getDragAfterElement(container, y, selector = '.compact-progress-block') {
+        const draggableElements = [...container.querySelectorAll(`${selector}:not(.dragging)`)];
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+    
+    /**
+     * Handle drag enter event
+     */
+    handleDragEnter(e) {
+        if (!this.dragState.isDragging) return;
+        
+        const dropZone = e.target.closest('.progress-blocks-container') || 
+                        e.target.closest('.all-company-blocks-section');
+        
+        if (dropZone) {
+            dropZone.classList.add('drop-zone-hover');
+        }
+    }
+    
+    /**
+     * Handle drag leave event
+     */
+    handleDragLeave(e) {
+        if (!this.dragState.isDragging) return;
+        
+        const dropZone = e.target.closest('.progress-blocks-container') || 
+                        e.target.closest('.all-company-blocks-section');
+        
+        if (dropZone && !dropZone.contains(e.relatedTarget)) {
+            dropZone.classList.remove('drop-zone-hover');
+        }
+    }
+    
+    /**
+     * Handle drop event
+     */
+    handleDrop(e) {
+        if (!this.dragState.isDragging) {
+            return;
+        }
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (this.dragState.draggedType === 'progress') {
+            this.handleProgressBlockDrop(e);
+        } else if (this.dragState.draggedType === 'company') {
+            this.handleCompanyBlockDrop(e);
+        }
+        
+        // Clean up
+        this.cleanupDragState();
+    }
+    
+    /**
+     * Handle progress block drop
+     */
+    handleProgressBlockDrop(e) {
+        const container = e.target.closest('.progress-blocks-container');
+        if (!container) {
+            return;
+        }
+        
+        // Get the target company ID - need to look at the structure differently
+        const companyProgressContainer = container.closest('.company-progress-container');
+        
+        if (!companyProgressContainer) {
+            return;
+        }
+        
+        // Get the index and find the corresponding company block
+        const containerIndex = companyProgressContainer.dataset.companyIndex;
+        const companyBlocks = document.querySelectorAll('.company-block');
+        const companyBlock = companyBlocks[containerIndex];
+        
+        const targetCompanyId = companyBlock ? parseInt(companyBlock.dataset.companyId) : null;
+        
+        if (!targetCompanyId) {
+            return;
+        }
+        
+        // Find position to insert
+        const insertMarker = document.getElementById('drag-insert-marker');
+        const afterElement = insertMarker?.previousElementSibling;
+        
+        // Update the data model
+        this.moveProgressBlock(
+            this.dragState.draggedData,
+            targetCompanyId,
+            afterElement
+        );
+    }
+    
+    /**
+     * Handle company block drop
+     */
+    handleCompanyBlockDrop(e) {
+        const container = e.target.closest('.all-company-blocks-section');
+        if (!container) return;
+        
+        // Find position to insert
+        const insertMarker = document.getElementById('drag-insert-marker');
+        const afterElement = insertMarker?.previousElementSibling;
+        
+        // Update the company order
+        this.reorderCompanies(
+            this.dragState.draggedData.companyId,
+            afterElement
+        );
+    }
+    
+    /**
+     * Move a progress block to a new company/position
+     */
+    moveProgressBlock(item, targetCompanyId, afterElement) {
+
+        
+        // Check if item exists
+        if (!item) {
+            console.error('Cannot move null item');
+            return;
+        }
+        
+        // Get the current company ID
+        const currentCompanyId = item.company_id || (item.company_info ? item.company_info.id : null);
+        
+        // Prevent cross-company moves
+        if (String(currentCompanyId) !== String(targetCompanyId)) {
+
+            UIComponents.showToast('Progress blocks cannot be moved between companies', 'warning');
+            return;
+        }
+        
+        // If there's an afterElement, find its data and position
+        if (afterElement) {
+            const afterProjectId = afterElement.dataset.projectId;
+            const afterAgreementId = afterElement.dataset.agreementId;
+            const afterItemId = afterProjectId || afterAgreementId;
+            const afterItemType = afterProjectId ? 'project' : 'agreement';
+            
+            // Use string comparison to handle both string and number IDs
+            const afterIndex = this.dashboardData.findIndex(d => 
+                String(d.id) === String(afterItemId) && d.type === afterItemType
+            );
+            
+            if (afterIndex !== -1) {
+                // Get current position
+                const currentIndex = this.dashboardData.indexOf(item);
+                
+                if (currentIndex !== -1) {
+                    // Remove the item from its current position
+                    this.dashboardData.splice(currentIndex, 1);
+                    
+                    // Calculate where to insert
+                    // If we removed an item before the target position, adjust the index
+                    let insertIndex = afterIndex;
+                    if (currentIndex < afterIndex) {
+                        insertIndex = afterIndex - 1;
+                    }
+                    
+                    // We want to insert AFTER the target element, so add 1
+                    insertIndex = insertIndex + 1;
+                    
+                    this.dashboardData.splice(insertIndex, 0, item);
+                } else {
+                    console.error('Could not find current item in dashboardData');
+                }
+            } else {
+                console.error('Could not find afterElement in dashboardData');
+            }
+        } else {
+            // No afterElement means insert at beginning of company's items
+            // Remove from old position
+            const currentIndex = this.dashboardData.indexOf(item);
+            if (currentIndex !== -1) {
+                this.dashboardData.splice(currentIndex, 1);
+            }
+            
+            // Find first item of target company
+            let firstIndex = -1;
+            for (let i = 0; i < this.dashboardData.length; i++) {
+                const itemCompanyId = this.dashboardData[i].company_id || 
+                                     (this.dashboardData[i].company_info ? this.dashboardData[i].company_info.id : null);
+                if (String(itemCompanyId) === String(targetCompanyId)) {
+                    firstIndex = i;
+                    break;
+                }
+            }
+            
+            if (firstIndex !== -1) {
+                // Insert before first item of company
+                this.dashboardData.splice(firstIndex, 0, item);
+            } else {
+                // No items for this company yet, just push
+                this.dashboardData.push(item);
+            }
+        }
+        
+
+        
+        // Save and re-render
+        this.saveDashboardState();
+        this.renderDashboard();
+    }
+    
+    /**
+     * Reorder companies
+     */
+    reorderCompanies(companyId, afterElement) {
+        const companies = this.groupItemsByCompany();
+        // Keep company IDs as strings or numbers as they are
+        const companyIds = Object.keys(companies);
+        
+        // Convert companyId to string for consistent comparison
+        const draggedCompanyIdStr = String(companyId);
+        
+        // Remove the dragged company from the list
+        const draggedIndex = companyIds.indexOf(draggedCompanyIdStr);
+        if (draggedIndex !== -1) {
+            companyIds.splice(draggedIndex, 1);
+        }
+        
+        // Find where to insert
+        let insertIndex = companyIds.length; // Default to end
+        if (afterElement) {
+            const afterId = String(afterElement.dataset.companyId);
+            const afterIndex = companyIds.indexOf(afterId);
+            if (afterIndex !== -1) {
+                insertIndex = afterIndex + 1;
+            }
+        } else {
+            insertIndex = 0; // Insert at beginning if no afterElement
+        }
+        
+        // Insert the company at new position
+        companyIds.splice(insertIndex, 0, draggedCompanyIdStr);
+        
+        // Reorder dashboard data based on new company order
+        const newDashboardData = [];
+        companyIds.forEach(id => {
+            const companyItems = this.dashboardData.filter(item => {
+                // Check both company_id and company_info.id for compatibility
+                const itemCompanyId = item.company_id || (item.company_info ? item.company_info.id : null);
+                // Convert both to strings for consistent comparison
+                return String(itemCompanyId) === String(id);
+            });
+            newDashboardData.push(...companyItems);
+        });
+        
+        this.dashboardData = newDashboardData;
+        
+        // Save and re-render
+        this.saveDashboardState();
+        this.renderDashboard();
+    }
+    
+    /**
+     * Handle drag end event
+     */
+    handleDragEnd(e) {
+        this.cleanupDragState();
+    }
+    
+    /**
+     * Clean up drag state
+     */
+    cleanupDragState() {
+        // Remove dragging classes
+        if (this.dragState.draggedElement) {
+            this.dragState.draggedElement.classList.remove('dragging');
+        }
+        
+        // Remove drop zone highlights
+        document.querySelectorAll('.drop-zone-active').forEach(zone => {
+            zone.classList.remove('drop-zone-active', 'drop-zone-hover');
+        });
+        
+        // Remove insertion marker
+        const marker = document.getElementById('drag-insert-marker');
+        if (marker) {
+            marker.remove();
+        }
+        
+        // Reset drag state
+        this.dragState = {
+            isDragging: false,
+            draggedElement: null,
+            draggedData: null,
+            draggedType: null,
+            sourceCompanyId: null,
+            sourceIndex: null,
+            dropTargets: [],
+            currentDropTarget: null
+        };
     }
     
     /**
@@ -512,6 +1104,16 @@ class Dashboard {
                         // Set the type explicitly on the item
                         detailedItem.type = type;
                         
+                        // Ensure company_id is set consistently
+                        if (!detailedItem.company_id && companyData.company) {
+                            detailedItem.company_id = companyData.company.id;
+                        }
+                        
+                        // Also store company info for display
+                        if (!detailedItem.company_info && companyData.company) {
+                            detailedItem.company_info = companyData.company;
+                        }
+                        
                         if (type === 'project') {
                             try {
                                 const hours = await window.acceloAPI.getProjectHours(item.id);
@@ -597,6 +1199,18 @@ class Dashboard {
         // Group items by company
         const companiesData = this.groupItemsByCompany();
         
+        // Get ordered list of company IDs based on the order they appear in dashboardData
+        const orderedCompanyIds = [];
+        const seenCompanies = new Set();
+        
+        this.dashboardData.forEach(item => {
+            const companyId = String(item.company_id || (item.company_info ? item.company_info.id : 'unknown'));
+            if (!seenCompanies.has(companyId) && companiesData[companyId]) {
+                orderedCompanyIds.push(companyId);
+                seenCompanies.add(companyId);
+            }
+        });
+        
         // Create the company-grouped layout
         const layoutContainer = document.createElement('div');
         layoutContainer.className = 'company-grouped-layout';
@@ -620,12 +1234,14 @@ class Dashboard {
         const allProgressBlocksSection = document.createElement('div');
         allProgressBlocksSection.className = 'all-progress-blocks-section';
         
-        // Add all company blocks and progress blocks
-        Object.entries(companiesData).forEach(([companyId, data], index) => {
+        // Add all company blocks and progress blocks in the correct order
+        orderedCompanyIds.forEach((companyId, index) => {
+            const data = companiesData[companyId];
             // Create company block
             const companyBlock = document.createElement('div');
             companyBlock.className = 'company-block';
             companyBlock.dataset.companyId = companyId;
+            companyBlock.draggable = true;
             companyBlock.dataset.companyIndex = index;
             
             // Calculate height based on number of progress items
@@ -659,12 +1275,25 @@ class Dashboard {
             companyProgressContainer.className = 'company-progress-container';
             companyProgressContainer.dataset.companyIndex = index;
             
-            // Add progress blocks for this specific company
-            data.items.forEach(item => {
-                const block = this.createCompactProgressBlock(item);
-                companyProgressContainer.appendChild(block);
+            // Create the actual progress blocks container
+            const progressBlocksContainer = document.createElement('div');
+            progressBlocksContainer.className = 'progress-blocks-container';
+            
+            // Add progress blocks for this specific company in the correct order
+            // Filter items from dashboardData to maintain order
+            const companyItems = this.dashboardData.filter(item => {
+                const itemCompanyId = item.company_id || (item.company_info ? item.company_info.id : null);
+                return String(itemCompanyId) === String(companyId);
             });
             
+
+            
+            companyItems.forEach(item => {
+                const block = this.createCompactProgressBlock(item);
+                progressBlocksContainer.appendChild(block);
+            });
+            
+            companyProgressContainer.appendChild(progressBlocksContainer);
             allProgressBlocksSection.appendChild(companyProgressContainer);
         });
         
@@ -896,6 +1525,15 @@ class Dashboard {
         const block = document.createElement('div');
         block.className = `compact-progress-block ${statusClass}`;
         block.dataset.itemId = item.id;
+        block.draggable = true;
+        
+        // Add specific type dataset
+        if (isProject) {
+            block.dataset.projectId = item.id;
+        } else {
+            block.dataset.agreementId = item.id;
+        }
+        
         // Add company association for theming
         const companyId = item.company_id || (item.company_info ? item.company_info.id : null);
         if (companyId) {
