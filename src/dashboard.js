@@ -707,6 +707,9 @@ class Dashboard {
             return `${h}h ${m}m`;
         };
         
+        // Calculate remaining hours
+        const remainingHours = Math.max(0, totalHours - loggedHours);
+        
         // Format period dates for agreements
         let periodInfo = '';
         if (!isProject && item.usage && item.usage.periodStart && item.usage.periodEnd) {
@@ -752,6 +755,11 @@ class Dashboard {
                 
                 <div class="compact-progress-bar">
                     <div class="compact-progress-fill" style="width: ${Math.min(percentage, 100)}%"></div>
+                </div>
+                
+                <div class="compact-remaining-section">
+                    <div class="compact-remaining-time">${formatHours(remainingHours)}</div>
+                    <div class="compact-remaining-label">Remaining</div>
                 </div>
             </div>
             

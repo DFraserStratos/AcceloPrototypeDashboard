@@ -257,6 +257,33 @@
     transition: width 0.3s ease;
 }
 
+/* Remaining Time Section */
+.compact-remaining-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    margin-left: var(--spacing-md);
+    min-width: 60px;
+    flex-shrink: 0;
+}
+
+.compact-remaining-time {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.compact-remaining-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+    line-height: 1;
+}
+
 /* Remove Button */
 .compact-remove-btn {
     position: absolute;
@@ -586,6 +613,11 @@
     
     .compact-progress-bar {
         width: 150px;
+    }
+    
+    .compact-remaining-section {
+        margin-left: var(--spacing-xs);
+        min-width: 50px;
     }
     
     .compact-block-content {
