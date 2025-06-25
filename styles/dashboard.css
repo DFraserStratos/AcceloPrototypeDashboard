@@ -583,8 +583,10 @@
 /* Compact Remove Button */
 .compact-remove-btn {
     position: absolute;
-    top: var(--spacing-xs);
-    right: var(--spacing-xs);
+    top: 0;
+    bottom: 0;
+    right: var(--spacing-md);
+    margin: auto 0;
     opacity: 0;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     background: var(--danger-light);
