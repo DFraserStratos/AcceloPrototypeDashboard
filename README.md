@@ -26,6 +26,10 @@ A comprehensive dashboard application for Accelo that displays companies, projec
 - **Compact Progress Tracking**: View up to 10+ projects and agreements on screen simultaneously
 - **Project Tracking**: Monitor project hours (billable and non-billable) with visual progress bars
 - **Agreement Management**: Track agreement usage and allowances with percentage indicators
+- **Smart Agreement Types**: Automatically detects and displays three types of agreements:
+  - **Time Budget Agreements**: Show as "Agreement | Time Budget" with hour-based progress tracking
+  - **Value Budget Agreements**: Show as "Agreement | Value Budget" with monetary progress tracking  
+  - **No Budget Agreements**: Show as "Agreement" with just time worked (no progress bar)
 - **Intelligent Type Detection**: Automatically identifies projects vs agreements with correct icons and labels
 - **Search & Add**: Easily search and add companies, projects, and agreements to your dashboard
 - **Full-Width Layout**: Progress blocks stretch across available width for optimal space utilization
@@ -229,6 +233,30 @@ The dashboard features a company-grouped layout with two main areas:
 4. Progress blocks show compact, essential information in a single row
 5. No company selection required - everything is always visible
 
+### Understanding Agreement Types
+
+The dashboard automatically detects three types of agreements based on their Period Budget settings in Accelo:
+
+#### Time Budget Agreements
+- **Display**: "Agreement | Time Budget" with progress bar
+- **Example**: "Seeds | Seeds Online Support" showing "14h 30m / 30h 0m"
+- **Detection**: Period has `allowance.billable > 0`
+- **Progress**: Shows hours used vs. hours allocated
+- **Visual**: Standard progress bar with percentage
+
+#### Value Budget Agreements  
+- **Display**: "Agreement | Value Budget" with monetary progress
+- **Progress**: Shows dollar amount used vs. budget allocated
+- **Detection**: Period has `allowance.value > 0` or `amount > 0`
+- **Visual**: Progress bar showing monetary utilization
+
+#### No Budget Agreements (Time & Materials)
+- **Display**: "Agreement" with time worked only
+- **Example**: "Alpine P | LMS Reactive Support Time & Materials" showing "1h 30m worked"
+- **Detection**: Period Budget is "Off" (no meaningful allowance values)
+- **No Progress Bar**: Only shows time worked, no target to track against
+- **Monetary Value**: May show value in Accelo but no hour count target
+
 ### Understanding Progress Blocks
 
 All progress blocks use a **compact, single-row layout** showing:
@@ -244,9 +272,10 @@ All progress blocks use a **compact, single-row layout** showing:
 - Automatic detection based on project-specific fields
 
 **Agreement Blocks** (📄 icon):
-- Display used hours vs. allowance hours
-- Type label: "AGREEMENT" 
-- Automatic detection based on contract-specific fields
+- **Time Budget**: Display used hours vs. allowance hours with "AGREEMENT | TIME BUDGET" label
+- **Value Budget**: Display monetary progress with "AGREEMENT | VALUE BUDGET" label
+- **No Budget**: Display only time worked with "AGREEMENT" label (no progress bar)
+- Automatic detection based on period budget settings in Accelo
 
 **Layout Features**:
 - Designed to fit 10+ items on screen simultaneously
@@ -283,7 +312,7 @@ getCompanies(filters) // Get company list
 getProjects(companyId, filters) // Get projects for company
 getAgreements(companyId, filters) // Get agreements
 getProjectHours(projectId) // Get comprehensive project time (see below)
-getAgreementUsage(agreementId) // Get period usage
+getAgreementUsage(agreementId) // Get period usage with budget type detection
 getDashboardData(companyIds) // Bulk load for dashboard
 searchAll(query) // Search across all object types
 ```
@@ -385,6 +414,47 @@ One of the key features of this dashboard is **accurate project time tracking** 
 - **Nested structure**: Tasks that belong to milestones
 
 This ensures the dashboard shows the same total hours as Accelo's project summary view.
+
+### Agreement Budget Type Detection
+
+The dashboard automatically detects agreement types based on Period Budget settings from Accelo's API:
+
+#### Detection Logic
+```javascript
+// In getAgreementUsage() function
+const allowance = currentPeriod.allowance || {};
+
+if (allowance && allowance.billable && parseFloat(allowance.billable) > 0) {
+    budgetType = 'TIME_BUDGET';
+} else if (allowance && ((allowance.value && parseFloat(allowance.value) > 0) || 
+                        (currentPeriod.amount && parseFloat(currentPeriod.amount) > 0))) {
+    budgetType = 'VALUE_BUDGET';
+} else {
+    budgetType = 'NO_BUDGET';
+}
+```
+
+#### Return Structure
+```javascript
+{
+    budgetType: 'TIME_BUDGET' | 'VALUE_BUDGET' | 'NO_BUDGET',
+    timeAllowance: 108000, // seconds
+    timeUsed: 36000,       // seconds  
+    valueAllowance: 5000.00,
+    valueUsed: 1250.00,
+    percentageUsed: 33.33
+}
+```
+
+#### Display Logic
+- **TIME_BUDGET**: Shows "Agreement | Time Budget" with hour progress bar
+- **VALUE_BUDGET**: Shows "Agreement | Value Budget" with monetary progress
+- **NO_BUDGET**: Shows "Agreement" with only time worked, no progress bar
+
+This matches Accelo's Period Budget settings where:
+- Time Budget = Period Budget "On" with hour allowance
+- Value Budget = Period Budget "On" with monetary allowance
+- No Budget = Period Budget "Off" (Time & Materials)
 
 ### Why This Matters
 

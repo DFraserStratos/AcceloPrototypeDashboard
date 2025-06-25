@@ -137,6 +137,12 @@ GET /api/chat/company/123
       "status": 1,
       "standing": "active",
       "retainer_type": "time",
+      "budgetType": "TIME_BUDGET",
+      "timeAllowance": 144000,
+      "timeUsed": 36000,
+      "valueAllowance": 5000.00,
+      "valueUsed": 1250.00,
+      "percentageUsed": 25.0,
       "current_period": {
         "id": 101,
         "date_commenced": 1640995200,
@@ -439,6 +445,72 @@ Once connected to office VPN, test in this order:
    ```bash
    curl "http://localhost:8080/api/chat/test/contracts?_search=wetfish&_fields=id,title,against&_limit=10"
    ```
+
+## Agreement Budget Types
+
+The Chat API automatically detects and returns different types of agreements based on their Period Budget settings in Accelo:
+
+### Budget Type Detection
+
+All agreement responses include a `budgetType` field with one of three values:
+
+- **`TIME_BUDGET`**: Agreements with time-based budgets (Period Budget "On" with hour allowance)
+- **`VALUE_BUDGET`**: Agreements with monetary budgets (Period Budget "On" with value allowance)  
+- **`NO_BUDGET`**: Time & Materials agreements (Period Budget "Off")
+
+### Response Fields
+
+For each agreement, the API returns:
+
+```javascript
+{
+  "id": 789,
+  "title": "Agreement Name",
+  "budgetType": "TIME_BUDGET" | "VALUE_BUDGET" | "NO_BUDGET",
+  "timeAllowance": 144000,     // seconds (for TIME_BUDGET)
+  "timeUsed": 36000,           // seconds (for all types)
+  "valueAllowance": 5000.00,   // dollars (for VALUE_BUDGET)
+  "valueUsed": 1250.00,        // dollars (for VALUE_BUDGET)
+  "percentageUsed": 25.0,      // percentage (for budgeted types)
+  // ... other fields
+}
+```
+
+### Display Recommendations
+
+Based on `budgetType`, display agreements as:
+
+- **TIME_BUDGET**: "Agreement | Time Budget" with hour progress bar
+- **VALUE_BUDGET**: "Agreement | Value Budget" with monetary progress
+- **NO_BUDGET**: "Agreement" with only time worked (no progress bar)
+
+### Example Usage
+
+```bash
+# Get company with agreements showing budget types
+curl "http://localhost:8080/api/chat/company/123"
+
+# Response includes:
+{
+  "agreements": [
+    {
+      "id": 456,
+      "title": "Seeds Online Support", 
+      "budgetType": "TIME_BUDGET",
+      "timeAllowance": 108000,
+      "timeUsed": 52200,
+      "percentageUsed": 48.3
+    },
+    {
+      "id": 789,
+      "title": "Alpine LMS Support",
+      "budgetType": "NO_BUDGET", 
+      "timeUsed": 5400,
+      "percentageUsed": null
+    }
+  ]
+}
+```
 
 ## Rate Limiting & Performance
 

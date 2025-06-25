@@ -484,6 +484,44 @@ Period structure:
 }
 ```
 
+### Dashboard Budget Type Detection
+
+The Accelo Dashboard uses the period `allowance` field to automatically detect three types of agreements:
+
+#### Detection Logic
+```javascript
+// Based on current period allowance data
+const allowance = currentPeriod.allowance || {};
+
+if (allowance && allowance.billable && parseFloat(allowance.billable) > 0) {
+    budgetType = 'TIME_BUDGET';   // Period Budget "On" with hour allowance
+} else if (allowance && ((allowance.value && parseFloat(allowance.value) > 0) || 
+                        (currentPeriod.amount && parseFloat(currentPeriod.amount) > 0))) {
+    budgetType = 'VALUE_BUDGET';  // Period Budget "On" with monetary allowance
+} else {
+    budgetType = 'NO_BUDGET';     // Period Budget "Off" (Time & Materials)
+}
+```
+
+#### Period Allowance Structure
+```json
+{
+  "allowance": {
+    "billable": "108000",    // seconds (3600 = 1 hour)
+    "value": "5000.00",      // dollars
+    "nonbillable": "0"
+  },
+  "amount": 5000.00          // alternative value field
+}
+```
+
+#### Dashboard Display
+- **TIME_BUDGET**: Shows "Agreement | Time Budget" with hour progress
+- **VALUE_BUDGET**: Shows "Agreement | Value Budget" with monetary progress  
+- **NO_BUDGET**: Shows "Agreement" with time worked only (no progress bar)
+
+This matches Accelo's Period Budget settings where agreements can have time-based budgets, value-based budgets, or no budgets (Time & Materials).
+
 ## Time Tracking
 
 ### Timers
