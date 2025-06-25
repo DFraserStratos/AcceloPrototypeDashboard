@@ -632,10 +632,6 @@ class Dashboard {
      * Create a compact progress block matching the user's mockup design
      */
     createCompactProgressBlock(item) {
-        const block = document.createElement('div');
-        block.className = 'compact-progress-block';
-        block.dataset.itemId = item.id;
-        
         // Determine type and icon - improved logic
         let isProject = false;
         let type = 'agreement'; // default to agreement
@@ -703,6 +699,24 @@ class Dashboard {
         // Calculate remaining hours
         const remainingHours = Math.max(0, totalHours - loggedHours);
         
+        // Determine progress status and colors
+        let progressStatus = 'success'; // default green
+        let statusClass = '';
+        
+        if (percentage > 100) {
+            // Over budget - Red
+            progressStatus = 'danger';
+            statusClass = 'status-danger';
+        } else if (percentage >= 75) {
+            // Approaching limit - Yellow
+            progressStatus = 'warning';
+            statusClass = 'status-warning';
+        } else {
+            // On track - Green
+            progressStatus = 'success';
+            statusClass = 'status-success';
+        }
+        
         // Format period dates for agreements
         let periodInfo = '';
         if (!isProject && item.usage && item.usage.periodStart && item.usage.periodEnd) {
@@ -721,6 +735,11 @@ class Dashboard {
                 periodInfo = `<div class="compact-period-info">${formatDate(startDate)} - ${formatDate(endDate)}</div>`;
             }
         }
+
+        // Create block element with status class
+        const block = document.createElement('div');
+        block.className = `compact-progress-block ${statusClass}`;
+        block.dataset.itemId = item.id;
 
         block.innerHTML = `
             <div class="compact-block-content">
@@ -746,10 +765,10 @@ class Dashboard {
                     </div>
                 </div>
                 
-                <div class="compact-percentage">${Math.round(percentage)}%</div>
+                <div class="compact-percentage ${statusClass}">${Math.round(percentage)}%</div>
                 
                 <div class="compact-progress-bar">
-                    <div class="compact-progress-fill" style="width: ${Math.min(percentage, 100)}%"></div>
+                    <div class="compact-progress-fill compact-progress-${progressStatus}" style="width: ${Math.min(percentage, 100)}%"></div>
                 </div>
                 
                 <div class="compact-remaining-section">
