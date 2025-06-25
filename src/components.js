@@ -3,13 +3,37 @@
  */
 
 class UIComponents {
+    // Color palette for client theming - very dark, muted tones for background zones
+    static COLOR_PALETTE = [
+        { name: 'Blue', value: '#1a365d', contrast: '#FFFFFF' },
+        { name: 'Indigo', value: '#312e81', contrast: '#FFFFFF' },
+        { name: 'Purple', value: '#581c87', contrast: '#FFFFFF' },
+        { name: 'Pink', value: '#831843', contrast: '#FFFFFF' },
+        { name: 'Rose', value: '#9f1239', contrast: '#FFFFFF' },
+        { name: 'Red', value: '#7f1d1d', contrast: '#FFFFFF' },
+        { name: 'Orange', value: '#7c2d12', contrast: '#FFFFFF' },
+        { name: 'Amber', value: '#78350f', contrast: '#FFFFFF' },
+        { name: 'Yellow', value: '#713f12', contrast: '#FFFFFF' },
+        { name: 'Lime', value: '#365314', contrast: '#FFFFFF' },
+        { name: 'Green', value: '#14532d', contrast: '#FFFFFF' },
+        { name: 'Emerald', value: '#064e3b', contrast: '#FFFFFF' },
+        { name: 'Teal', value: '#134e4a', contrast: '#FFFFFF' },
+        { name: 'Cyan', value: '#164e63', contrast: '#FFFFFF' },
+        { name: 'Sky', value: '#0c4a6e', contrast: '#FFFFFF' },
+        { name: 'Slate', value: '#334155', contrast: '#FFFFFF' }
+    ];
+
     /**
-     * Create a company card element
+     * Create a company card element with color theming support
      */
     static createCompanyCard(company, isActive = false) {
         const card = document.createElement('div');
         card.className = `company-card ${isActive ? 'active' : ''}`;
         card.dataset.companyId = company.id;
+        
+        // Get saved color theme
+        const savedColors = this.getSavedCompanyColors();
+        const companyColor = savedColors[company.id];
         
         // Get initials for icon
         const initials = company.name
@@ -21,19 +45,26 @@ class UIComponents {
         
         card.innerHTML = `
             <div class="company-card-header">
-                <div class="company-icon">${initials}</div>
+                <div class="company-icon" ${companyColor ? `style="background-color: ${companyColor.value}; color: ${companyColor.contrast};"` : ''}>${initials}</div>
                 <div class="company-info">
                     <div class="company-name">${this.escapeHtml(company.name)}</div>
                     <div class="company-meta">
                         ${company.itemCount || 0} items
                     </div>
                 </div>
-                <button class="btn btn-icon btn-ghost btn-remove company-remove-btn" 
-                        onclick="event.stopPropagation(); dashboard.confirmRemoveCompany(${company.id})" 
-                        title="Remove company from dashboard"
-                        data-company-id="${company.id}">
-                    <span class="icon-remove">✕</span>
-                </button>
+                <div class="company-card-actions">
+                    <button class="btn btn-icon btn-ghost company-color-btn" 
+                            onclick="event.stopPropagation(); UIComponents.showColorPicker(${company.id}, '${this.escapeHtml(company.name)}')" 
+                            title="Change company color">
+                        <i class="fa-solid fa-palette"></i>
+                    </button>
+                    <button class="btn btn-icon btn-ghost btn-remove company-remove-btn" 
+                            onclick="event.stopPropagation(); dashboard.confirmRemoveCompany(${company.id})" 
+                            title="Remove company from dashboard"
+                            data-company-id="${company.id}">
+                        <span class="icon-remove">✕</span>
+                    </button>
+                </div>
             </div>
             ${company.hasActiveItems ? '<div class="company-card-indicator"></div>' : ''}
         `;
@@ -386,6 +417,190 @@ class UIComponents {
             dialog.classList.add('show');
             confirmBtn.focus();
         }, 10);
+    }
+
+    /**
+     * Show color picker modal for a company
+     */
+    static showColorPicker(companyId, companyName) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-backdrop color-picker-modal';
+        modal.id = 'colorPickerModal';
+        
+        const savedColors = this.getSavedCompanyColors();
+        const currentColor = savedColors[companyId];
+        
+        modal.innerHTML = `
+            <div class="modal color-picker-modal-content">
+                <div class="modal-header">
+                    <h3>Choose Color for ${this.escapeHtml(companyName)}</h3>
+                    <button class="btn btn-icon btn-ghost" onclick="UIComponents.hideColorPicker()">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="color-palette">
+                        ${this.COLOR_PALETTE.map(color => `
+                            <button class="color-option ${currentColor && currentColor.value === color.value ? 'selected' : ''}"
+                                    style="background-color: ${color.value};"
+                                    onclick="UIComponents.selectCompanyColor(${companyId}, '${color.value}', '${color.contrast}', '${color.name}')"
+                                    title="${color.name}"
+                                    data-color="${color.value}">
+                                <i class="fa-solid fa-check" style="color: ${color.contrast};"></i>
+                            </button>
+                        `).join('')}
+                    </div>
+                    <div class="color-actions">
+                        <button class="btn btn-ghost" onclick="UIComponents.resetCompanyColor(${companyId})">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            Reset to Default
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Show the modal
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, 10);
+        
+        // Add escape key handler
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                this.hideColorPicker();
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+        modal.dataset.escapeHandler = 'true';
+        
+        // Add click outside to close
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                this.hideColorPicker();
+            }
+        });
+    }
+
+    /**
+     * Hide color picker modal
+     */
+    static hideColorPicker() {
+        const modal = document.getElementById('colorPickerModal');
+        if (modal) {
+            modal.remove();
+            // Remove escape key handler
+            document.removeEventListener('keydown', arguments.callee);
+        }
+    }
+
+    /**
+     * Select a color for a company
+     */
+    static selectCompanyColor(companyId, colorValue, contrastColor, colorName) {
+        const savedColors = this.getSavedCompanyColors();
+        savedColors[companyId] = {
+            value: colorValue,
+            contrast: contrastColor,
+            name: colorName
+        };
+        
+        localStorage.setItem('companyColors', JSON.stringify(savedColors));
+        
+        // Update the UI
+        this.applyCompanyColor(companyId, colorValue, contrastColor);
+        this.hideColorPicker();
+        
+        // Show success toast
+        this.showToast(`Applied ${colorName} theme to company`, 'success');
+    }
+
+    /**
+     * Reset company color to default
+     */
+    static resetCompanyColor(companyId) {
+        const savedColors = this.getSavedCompanyColors();
+        delete savedColors[companyId];
+        localStorage.setItem('companyColors', JSON.stringify(savedColors));
+        
+        // Reset the UI to default styling
+        this.applyCompanyColor(companyId, null, null);
+        this.hideColorPicker();
+        
+        this.showToast('Reset to default theme', 'success');
+    }
+
+    /**
+     * Apply color theme to company elements
+     */
+    static applyCompanyColor(companyId, colorValue, contrastColor) {
+        // Update company block styling (since we removed individual icons)
+        const companyElement = document.querySelector(`[data-company-id="${companyId}"]`);
+        if (companyElement) {
+            if (colorValue) {
+                // Apply a subtle colored border to the company block
+                companyElement.style.borderColor = colorValue;
+                companyElement.style.background = `linear-gradient(135deg, ${colorValue} 0%, ${colorValue}dd 100%)`;
+            } else {
+                // Reset to default styling
+                companyElement.style.borderColor = '';
+                companyElement.style.background = '';
+            }
+        }
+        
+        // Update related project/agreement icons
+        this.updateProgressBlockIcons(companyId, colorValue, contrastColor);
+    }
+
+    /**
+     * Update progress block styling with company theme
+     */
+    static updateProgressBlockIcons(companyId, colorValue, contrastColor) {
+        // Find all progress blocks for this company's items
+        const progressBlocks = document.querySelectorAll('.compact-progress-block');
+        
+        progressBlocks.forEach(block => {
+            // Check if this block belongs to the company
+            const blockCompanyId = block.dataset.companyId;
+            if (blockCompanyId == companyId) {
+                if (colorValue) {
+                    // Apply company color to the left border bar
+                    block.style.setProperty('--company-color', colorValue);
+                    // Use CSS custom property to style the ::before pseudo-element
+                    block.style.setProperty('--border-color', colorValue);
+                } else {
+                    // Reset to default
+                    block.style.removeProperty('--company-color');
+                    block.style.removeProperty('--border-color');
+                }
+            }
+        });
+    }
+
+    /**
+     * Get saved company colors from localStorage
+     */
+    static getSavedCompanyColors() {
+        try {
+            const saved = localStorage.getItem('companyColors');
+            return saved ? JSON.parse(saved) : {};
+        } catch (error) {
+            console.error('Error loading company colors:', error);
+            return {};
+        }
+    }
+
+    /**
+     * Apply all saved company colors on page load
+     */
+    static applySavedCompanyColors() {
+        const savedColors = this.getSavedCompanyColors();
+        
+        Object.entries(savedColors).forEach(([companyId, color]) => {
+            this.applyCompanyColor(companyId, color.value, color.contrast);
+        });
     }
 }
 

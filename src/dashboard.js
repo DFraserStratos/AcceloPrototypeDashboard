@@ -37,6 +37,11 @@ class Dashboard {
                 this.renderDashboard();
             }
             
+            // Apply saved company colors after rendering
+            setTimeout(() => {
+                UIComponents.applySavedCompanyColors();
+            }, 100);
+            
         } catch (error) {
             console.error('Dashboard initialization failed:', error);
             UIComponents.showToast(error.message, 'error');
@@ -420,7 +425,7 @@ class Dashboard {
         div.dataset.id = item.id;
         div.dataset.type = type;
         
-        const icon = type === 'project' ? '<i class="fa-solid fa-folder"></i>' : '<i class="fa-solid fa-clipboard"></i>';
+        const icon = type === 'project' ? '<i class="fa-solid fa-diagram-project"></i>' : '<i class="fa-solid fa-file-contract"></i>';
         const title = item.title || item.name;
         
         div.innerHTML = `
@@ -603,9 +608,22 @@ class Dashboard {
             // Create company block (left side)
             const companyBlock = document.createElement('div');
             companyBlock.className = 'company-block';
+            companyBlock.dataset.companyId = companyId;
+            
+            // Get saved color theme for potential use later
+            const savedColors = UIComponents.getSavedCompanyColors();
+            const companyColor = savedColors[companyId];
+            
             companyBlock.innerHTML = `
                 <div class="company-block-content">
                     <div class="company-block-name">${UIComponents.escapeHtml(data.company.name)}</div>
+                    <div class="company-block-overlay">
+                        <button class="btn btn-icon btn-ghost company-color-btn" 
+                                onclick="event.stopPropagation(); UIComponents.showColorPicker(${companyId}, '${UIComponents.escapeHtml(data.company.name)}')" 
+                                title="Change company color">
+                            <i class="fa-solid fa-palette"></i>
+                        </button>
+                    </div>
                 </div>
             `;
             
@@ -662,7 +680,7 @@ class Dashboard {
             }
         }
         
-        const icon = isProject ? '<i class="fa-solid fa-clipboard"></i>' : '<i class="fa-solid fa-file-lines"></i>';
+        const icon = isProject ? '<i class="fa-solid fa-diagram-project"></i>' : '<i class="fa-solid fa-file-contract"></i>';
         const title = item.title || item.name || `${type} #${item.id}`;
         
         // Calculate hours and percentage
@@ -744,6 +762,11 @@ class Dashboard {
         const block = document.createElement('div');
         block.className = `compact-progress-block ${statusClass}`;
         block.dataset.itemId = item.id;
+        // Add company association for theming
+        const companyId = item.company_id || (item.company_info ? item.company_info.id : null);
+        if (companyId) {
+            block.dataset.companyId = companyId;
+        }
 
         block.innerHTML = `
             <div class="compact-block-content">
