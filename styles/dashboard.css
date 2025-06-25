@@ -26,10 +26,51 @@
 }
 
 .navbar-title {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-xl);
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--gray-700);
     letter-spacing: var(--letter-spacing-tight);
+    position: relative;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.navbar-title::before {
+    content: '\f828';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    color: var(--gray-600);
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+
+.navbar-title:hover {
+    color: var(--gray-800);
+}
+
+.navbar-title:hover::before {
+    color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.navbar-title::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gray-400) 0%, var(--gray-500) 100%);
+    border-radius: 1px;
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.navbar-title:hover::after {
+    transform: scaleX(1);
+    background: linear-gradient(90deg, var(--primary-color) 0%, var(--gray-600) 100%);
 }
 
 .navbar-actions {
