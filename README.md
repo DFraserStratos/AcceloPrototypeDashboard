@@ -605,6 +605,44 @@ static createCustomBlock(data) {
 3. **Update render methods** for new UI
 4. **Test state persistence** across reloads
 
+### Drag & Drop Architecture
+
+The drag and drop system is implemented with the following components:
+
+#### Event Handling
+```javascript
+// Event delegation on main content area
+setupDragAndDrop() {
+  const mainContent = document.querySelector('.main-content');
+  mainContent.addEventListener('dragstart', this.handleDragStart.bind(this));
+  mainContent.addEventListener('dragover', this.handleDragOver.bind(this));
+  mainContent.addEventListener('drop', this.handleDrop.bind(this));
+}
+```
+
+#### Drag State Management
+```javascript
+dragState = {
+  isDragging: false,
+  draggedElement: null,    // DOM element being dragged
+  draggedData: null,       // Data object from dashboardData
+  draggedType: null,       // 'progress' or 'company'
+  sourceCompanyId: null    // For cross-company validation
+}
+```
+
+#### Data Model Updates
+- **Progress Blocks**: Array splice operations to reorder within `dashboardData`
+- **Companies**: Reorder entire sections of `dashboardData` by company grouping
+- **Persistence**: Automatic save to localStorage after each move
+- **Rendering**: Order preserved through filtered iteration of `dashboardData`
+
+#### Visual Feedback System
+- **Drop Zones**: Only valid targets are highlighted during drag
+- **Insertion Markers**: Animated markers show exact drop position
+- **Drag States**: Semi-transparent dragging elements with scale transform
+- **Cursor Changes**: Grab/grabbing cursors indicate interactive elements
+
 ### Error Handling Patterns
 
 ```javascript
@@ -787,6 +825,22 @@ Check terminal for:
 3. **Fixed Metrics**: Cannot customize displayed data
 
 ## Recent Updates
+
+### Drag & Drop Interface (v2.1)
+
+**New Features**:
+- **Progress Block Reordering**: Drag and drop progress blocks within the same company
+- **Company Reordering**: Drag company blocks to reorder entire company sections
+- **Visual Feedback**: Insertion markers, drop zone highlighting, and smooth animations
+- **Cross-Company Prevention**: Progress blocks cannot be moved between companies (with warning toast)
+- **Persistent Order**: All reordering is automatically saved to localStorage
+- **Smart Rendering**: Order is maintained across page refreshes and data updates
+
+**Technical Implementation**:
+- HTML5 Drag and Drop API with custom event handling
+- CSS transitions and visual feedback states
+- Data model updates with array splice operations
+- Event delegation for performance with dynamic content
 
 ### Dashboard Layout Redesign (v2.0)
 
