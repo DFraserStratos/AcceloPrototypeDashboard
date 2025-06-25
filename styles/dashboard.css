@@ -224,13 +224,14 @@
     border: 1px solid var(--gray-500);
     border-radius: var(--radius-md);
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
     min-height: 50px;
     box-shadow: var(--shadow-sm);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     cursor: pointer;
+    overflow: hidden;
 }
 
 .company-block:hover {
@@ -247,6 +248,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: inherit;
 }
 
 .company-block-name {
@@ -273,6 +275,8 @@
     border-radius: var(--radius-md);
     opacity: 0;
     transition: opacity 0.2s ease;
+    height: 100%;
+    width: 100%;
 }
 
 .company-block:hover .company-block-overlay {
@@ -1322,6 +1326,15 @@ body.dragging {
 
 .company-block:not(.dragging) {
     transition: transform 0.2s ease, height 0.3s ease;
+}
+
+/* Disable height transitions during reordering to prevent jarring animations */
+.is-reordering .company-block {
+    transition: transform 0.2s ease !important;
+}
+
+.is-reordering .company-block:not(.dragging) {
+    transition: transform 0.2s ease !important;
 }
 
 /* Visual feedback for valid/invalid drops */

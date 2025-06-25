@@ -588,6 +588,9 @@ class Dashboard {
         
         // Save and re-render
         this.saveDashboardState();
+        
+        // Add reordering class to prevent height animations
+        document.body.classList.add('is-reordering');
         this.renderDashboard();
         
         // Reapply saved company colors after rendering
@@ -653,6 +656,9 @@ class Dashboard {
         
         // Save and re-render
         this.saveDashboardState();
+        
+        // Add reordering class to prevent height animations
+        document.body.classList.add('is-reordering');
         this.renderDashboard();
         
         // Reapply saved company colors after rendering
@@ -1597,12 +1603,8 @@ class Dashboard {
             companyBlock.draggable = true;
             companyBlock.dataset.companyIndex = index;
             
-            // Calculate height based on number of progress items
-            const itemCount = companyData.items.length;
-            const progressBlockHeight = 50; // Base height of each progress block
-            const gapHeight = 8; // var(--spacing-xs)
-            const totalHeight = (progressBlockHeight * itemCount) + (gapHeight * (itemCount - 1));
-            companyBlock.style.height = `${totalHeight}px`;
+            // Don't set explicit height - let it be determined by actual content
+            // This prevents the double height calculation issue
             
             // Get saved color theme for potential use later
             const savedColors = UIComponents.getSavedCompanyColors();
@@ -1665,7 +1667,11 @@ class Dashboard {
         contentGrid.appendChild(layoutContainer);
         
         // Update heights after rendering
-        setTimeout(() => this.updateCompanyBlockHeights(), 100);
+        setTimeout(() => {
+            this.updateCompanyBlockHeights();
+            // Remove reordering class to restore transitions
+            document.body.classList.remove('is-reordering');
+        }, 10); // Reduced from 100ms to 10ms for faster adjustment
     }
     
     /**
@@ -1679,7 +1685,10 @@ class Dashboard {
             const correspondingContainer = progressContainers[index];
             if (correspondingContainer) {
                 const containerHeight = correspondingContainer.offsetHeight;
-                block.style.height = `${containerHeight}px`;
+                // Only update if height is different to avoid unnecessary reflows
+                if (block.offsetHeight !== containerHeight) {
+                    block.style.height = `${containerHeight}px`;
+                }
             }
         });
     }
