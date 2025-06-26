@@ -244,6 +244,12 @@ p {
     border-radius: var(--radius-md);
 }
 
+.btn-icon.btn-sm {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+}
+
 .btn-lg {
     padding: 16px 32px;
     font-size: var(--font-size-base);

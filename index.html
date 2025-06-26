@@ -19,8 +19,18 @@
             <span class="logo-text">Orbit</span>
         </div>
         <div class="navbar-dashboard-context" id="navbarDashboardContext" style="display: none;">
-            <i class="fa-solid fa-chart-simple"></i>
-            <span id="navbarDashboardName">Dashboard Name</span>
+            <div class="dashboard-info" onclick="dashboard.showDashboardRenameModal(document.getElementById('navbarDashboardName').textContent)">
+                <i class="fa-solid fa-chart-simple"></i>
+                <span id="navbarDashboardName">Dashboard Name</span>
+            </div>
+            <div class="dashboard-actions">
+                <button class="btn btn-icon btn-ghost btn-sm" onclick="dashboard.refreshDashboardData()" title="Refresh All">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+                <button class="btn btn-icon btn-primary btn-sm" onclick="dashboard.showAddItemModal()" title="Add Item">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
         </div>
         <div class="navbar-nav">
             <a href="#" class="btn btn-ghost navbar-link disabled" title="Coming Soon">
@@ -37,13 +47,6 @@
             </a>
         </div>
         <div class="navbar-actions">
-            <button class="btn btn-primary" onclick="dashboard.showAddItemModal()">
-                <span class="icon-add"></span>
-                Add Item
-            </button>
-            <button class="btn btn-icon btn-ghost" onclick="dashboard.refreshDashboardData()" title="Refresh All">
-                <i class="fa-solid fa-arrows-rotate"></i>
-            </button>
             <a href="/settings" class="btn btn-icon btn-ghost" title="Settings">
                 <i class="fa-solid fa-gear"></i>
             </a>

@@ -141,12 +141,8 @@ class Dashboard {
             if (dashboardName && dashboardName.trim()) {
                 nameElement.textContent = dashboardName;
                 context.style.display = 'flex';
-                
-                // Add click handler for renaming
-                context.onclick = () => this.showDashboardRenameModal(dashboardName);
             } else {
                 context.style.display = 'none';
-                context.onclick = null;
             }
         }
     }

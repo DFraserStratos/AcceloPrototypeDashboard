@@ -1,6 +1,6 @@
 # Orbit Dashboard
 
-A modern project management dashboard application that integrates with Accelo to display companies, projects, and agreements with real-time progress tracking.
+A modern project management dashboard application that integrates with Accelo to display companies, projects, and agreements with real-time progress tracking. Create and manage multiple dashboards for different teams, projects, or workflows.
 
 ## Table of Contents
 - [Features](#features)
@@ -9,6 +9,7 @@ A modern project management dashboard application that integrates with Accelo to
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage Guide](#usage-guide)
+- [Multi-Dashboard Management](#multi-dashboard-management)
 - [Technical Architecture](#technical-architecture)
 - [Project Structure](#project-structure)
 - [Development Guide](#development-guide)
@@ -21,9 +22,27 @@ A modern project management dashboard application that integrates with Accelo to
 
 ## Features
 
+### Dashboard Management
+- **Multiple Dashboards**: Create and manage unlimited dashboards for different teams, projects, or workflows
+- **Dashboard Switching**: Easy navigation between dashboards with dedicated management interface
+- **Per-Dashboard Settings**: Each dashboard maintains its own company colors, arrangements, and data
+- **Dashboard Renaming**: Click dashboard name in navbar to rename instantly
+- **Dashboard Statistics**: View item counts and creation dates for each dashboard
+
+### Navigation & Interface
+- **Modern Navigation Bar**: Clean, organized navigation with dashboard context display
+- **Compact Button Groups**: Dashboard-specific actions (refresh, add items) grouped with dashboard name
+- **Future-Ready Navigation**: Placeholder navigation for upcoming Chat and Reports features
+- **Responsive Design**: Optimized layout that works across desktop and tablet devices
+
+### Data Management
 - **Company-Grouped Layout**: Organized view with company blocks on the left and their related progress items on the right
 - **Drag & Drop Interface**: Reorder progress blocks within companies and reorder companies themselves
 - **Compact Progress Tracking**: View up to 10+ projects and agreements on screen simultaneously
+- **Per-Dashboard Company Colors**: Customize company colors independently for each dashboard
+- **Persistent Data**: All dashboard configurations and data automatically saved and restored
+
+### Project & Agreement Tracking
 - **Project Tracking**: Monitor project hours (billable and non-billable) with visual progress bars
 - **Agreement Management**: Track agreement usage and allowances with percentage indicators
 - **Smart Agreement Types**: Automatically detects and displays three types of agreements:
@@ -33,19 +52,27 @@ A modern project management dashboard application that integrates with Accelo to
 - **Intelligent Type Detection**: Automatically identifies projects vs agreements with correct icons and labels
 - **Search & Add**: Easily search and add companies, projects, and agreements to your dashboard
 - **Full-Width Layout**: Progress blocks stretch across available width for optimal space utilization
+
+### Security & Performance
 - **Secure Authentication**: Service Application OAuth 2.0 with 30-day tokens
 - **Real-time Updates**: Automatic data refresh with caching
-- **Responsive Design**: Works on desktop and tablet devices
-- **Persistent Layout**: Dashboard order and configuration saved to localStorage
+- **Data Migration**: Automatic migration from single-dashboard to multi-dashboard format
 
 ## Screenshots
 
 ### Main Dashboard
+- Modern navigation bar with dashboard context and compact action buttons
 - Company-grouped layout with company blocks on the left
 - Compact progress blocks stretching full-width on the right
 - Height-matched company blocks that adjust to their content
 - Visual progress bars and percentage indicators
 - Proper project (📋) and agreement (📄) type identification
+
+### Dashboard Management
+- Dashboard index page showing all created dashboards
+- Dashboard creation flow with immediate naming
+- Dashboard statistics and management options
+- Easy switching between multiple dashboards
 
 ### Settings Page
 - Secure API credential configuration
@@ -65,17 +92,20 @@ Orbit uses a three-tier architecture to work around browser CORS restrictions an
 │                 │◀────│                 │◀────│                 │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
    localStorage           In-Memory Store         OAuth 2.0
-   UI Components          CORS Handling           Service App
+   Multi-Dashboard        CORS Handling           Service App
+   UI Components          Dashboard Routing
 ```
 
 1. **Frontend (Browser)**
    - Single-page application using vanilla JavaScript (no framework dependencies)
    - Makes API calls to local Express server at `/api/proxy`
-   - Stores dashboard configuration in localStorage
+   - Stores multiple dashboard configurations in localStorage with unique IDs
    - Cannot directly call Accelo API due to CORS restrictions
+   - Handles routing between dashboard management and individual dashboards
 
 2. **Proxy Server (Express.js)**
    - Routes all API calls through `/api/proxy` endpoint
+   - Serves dashboard management interface at `/dashboards.html`
    - Stores OAuth credentials in memory (resets on server restart)
    - Adds necessary authentication headers for Accelo API
    - Handles CORS to allow browser requests
@@ -86,6 +116,28 @@ Orbit uses a three-tier architecture to work around browser CORS restrictions an
    - Executes as the designated user from app registration
    - Provides RESTful endpoints for all resources
    - Returns JSON responses with metadata
+
+### Multi-Dashboard Data Structure
+
+Each dashboard is stored independently in localStorage:
+
+```javascript
+// Dashboard Index
+dashboards_index: {
+  dashboards: [
+    { id: "dash_123", name: "Main Dashboard", createdAt: "2024-01-15T10:30:00Z" },
+    { id: "dash_456", name: "Q1 Projects", createdAt: "2024-01-20T14:15:00Z" }
+  ],
+  currentDashboardId: "dash_123"
+}
+
+// Individual Dashboard Data
+dashboard_data_dash_123: {
+  dashboardData: [...], // Companies, projects, agreements
+  companyOrder: [...],  // Custom company arrangement
+  companyColors: {...}  // Per-dashboard company colors
+}
+```
 
 ### Authentication Flow
 
@@ -184,8 +236,14 @@ When a user clicks on a company:
 
 ### Dashboard Overview
 
-The dashboard features a company-grouped layout with two main areas:
-1. **Navigation Bar**: Dashboard title, Add Item button, Settings link
+The dashboard features a modern navigation bar and company-grouped layout:
+
+1. **Navigation Bar**: 
+   - **Brand**: Orbit logo and name
+   - **Dashboard Context**: Current dashboard name with rename functionality and compact action buttons (refresh, add items)
+   - **Navigation**: Chat (coming soon), Dashboards, Reports (coming soon)
+   - **Settings**: Global settings access
+
 2. **Company-Grouped Content Area**: 
    - **Left**: Company blocks (fixed 120px width, height adjusts to content)
    - **Right**: Full-width progress blocks for projects and agreements
@@ -291,6 +349,67 @@ All progress blocks use a **compact, single-row layout** showing:
 - Results grouped by type
 - Click results to select multiple items
 
+## Multi-Dashboard Management
+
+### Creating Dashboards
+
+1. **From Navigation**: Click "Dashboards" in the navigation bar
+2. **Dashboard Index**: View all existing dashboards with statistics
+3. **Create New**: Click "Create New Dashboard" button
+4. **Automatic Setup**: New dashboard created with temporary name, redirects immediately
+5. **Name Your Dashboard**: Rename modal appears automatically for new dashboards
+6. **Start Adding**: Dashboard is ready for companies and projects
+
+### Managing Dashboards
+
+#### Dashboard Index Page (`/dashboards.html`)
+- **Dashboard List**: All dashboards with names, creation dates, and item counts
+- **Quick Actions**: 
+  - View/Open dashboard
+  - Rename dashboard
+  - Delete dashboard (with confirmation)
+- **Statistics**: See how many companies, projects, and agreements each dashboard contains
+- **Create New**: Always available at the top of the list
+
+#### Dashboard Navigation
+- **Current Dashboard**: Always visible in navbar with dashboard icon
+- **Quick Rename**: Click dashboard name in navbar to rename instantly
+- **Dashboard Switching**: Use "Dashboards" navigation to switch between dashboards
+- **Context Preservation**: Each dashboard maintains its own state when switching
+
+### Dashboard Features
+
+#### Per-Dashboard Data Isolation
+- **Independent Data**: Each dashboard has its own companies, projects, and agreements
+- **Separate Colors**: Company colors are unique per dashboard
+- **Custom Arrangements**: Drag & drop ordering is maintained per dashboard
+- **Individual Settings**: Each dashboard can be configured independently
+
+#### Data Migration
+- **Automatic Migration**: Existing single-dashboard data automatically migrated to multi-dashboard format
+- **Backward Compatibility**: No data loss during migration
+- **Seamless Transition**: Users with existing data see no interruption
+
+#### Dashboard Persistence
+- **Auto-Save**: All changes automatically saved to localStorage
+- **Reliable Storage**: Each dashboard stored with unique identifier
+- **Cross-Session**: Dashboard state maintained across browser sessions
+- **Data Integrity**: Robust error handling prevents data corruption
+
+### Best Practices
+
+#### Dashboard Organization
+- **Purpose-Driven**: Create dashboards for specific teams, projects, or time periods
+- **Descriptive Names**: Use clear, descriptive names like "Q1 2024 Projects" or "Client Services Team"
+- **Regular Cleanup**: Remove completed or outdated dashboards to maintain organization
+- **Color Coding**: Use consistent company colors within each dashboard for visual clarity
+
+#### Workflow Examples
+- **Team Dashboards**: Separate dashboards for different departments or teams
+- **Project Phases**: Create dashboards for different phases of large projects
+- **Client Segregation**: Organize dashboards by major clients or client types
+- **Time-Based**: Monthly or quarterly dashboards for reporting periods
+
 ## Technical Architecture
 
 ### Frontend Architecture
@@ -321,18 +440,39 @@ searchAll(query) // Search across all object types
 - Manages application state and UI updates
 - Handles company selection and display
 - Search implementation with debouncing
-- localStorage persistence for dashboard configuration
+- Multi-dashboard routing and state management
+- localStorage persistence with dashboard isolation
 - Modal and event management
 
 Key methods:
 ```javascript
-init() // Initialize dashboard
-loadDashboardState() // Restore from localStorage
-saveDashboardState() // Persist to localStorage
+init() // Initialize dashboard with multi-dashboard support
+loadDashboardState() // Restore current dashboard from localStorage
+saveDashboardState() // Persist current dashboard to localStorage
 selectCompany(id) // Handle company selection
 refreshDashboardData() // Update all data from API
 showAddItemModal() // Display search modal
 handleSearch(query) // Debounced search handler
+showDashboardRenameModal() // Dashboard renaming interface
+applyCompanyColor() // Per-dashboard company color management
+```
+
+**DashboardManager Class** (`src/dashboard-manager.js`)
+- Multi-dashboard lifecycle management
+- Dashboard creation, deletion, and switching
+- Data migration from single to multi-dashboard format
+- localStorage management with unique dashboard IDs
+- Dashboard statistics and metadata
+
+Key methods:
+```javascript
+createDashboard(name) // Create new dashboard with unique ID
+deleteDashboard(id) // Remove dashboard and cleanup data
+switchToDashboard(id) // Change active dashboard
+renameDashboard(id, newName) // Update dashboard name
+getDashboardStats(id) // Calculate dashboard statistics
+getAllDashboards() // Retrieve dashboard list
+migrateFromLegacyFormat() // Handle data migration
 ```
 
 **UIComponents Class** (`src/components.js`)
@@ -369,7 +509,28 @@ Key endpoints:
 
 ### State Management
 
-**Dashboard State** (localStorage)
+**Multi-Dashboard State** (localStorage)
+
+**Dashboard Index** (`dashboards_index`)
+```javascript
+{
+  dashboards: [
+    { 
+      id: "dash_1704123456789", 
+      name: "Main Dashboard", 
+      createdAt: "2024-01-01T12:30:00.000Z" 
+    },
+    { 
+      id: "dash_1704987654321", 
+      name: "Q1 Projects", 
+      createdAt: "2024-01-15T09:15:00.000Z" 
+    }
+  ],
+  currentDashboardId: "dash_1704123456789"
+}
+```
+
+**Individual Dashboard Data** (`dashboard_data_{id}`)
 ```javascript
 {
   dashboardData: [
@@ -379,6 +540,11 @@ Key endpoints:
       agreements: [...]
     }
   ],
+  companyOrder: [companyId1, companyId2, ...], // Custom arrangement
+  companyColors: { // Per-dashboard color customization
+    "companyId1": "#3b82f6",
+    "companyId2": "#10b981"
+  },
   lastUpdated: "ISO timestamp"
 }
 ```
@@ -944,36 +1110,51 @@ Check terminal for:
 
 ## Roadmap
 
-### Phase 1: Stability (Current)
+### Phase 1: Core Platform ✅ (Completed)
 - ✅ Core dashboard functionality
 - ✅ Service Application auth
 - ✅ Progress tracking
 - ✅ Search and add
+- ✅ Drag & drop interface
+- ✅ Company-grouped layout
+- ✅ Multi-dashboard management
+- ✅ Modern navigation system
 
-### Phase 2: Persistence
+### Phase 2: Enhanced Features (In Progress)
+- ✅ Per-dashboard company colors
+- ✅ Dashboard statistics and management
+- ✅ Automatic data migration
+- [ ] Chat integration (navigation placeholder ready)
+- [ ] Reports system (navigation placeholder ready)
+- [ ] Dashboard templates and sharing
+- [ ] Bulk import/export operations
+
+### Phase 3: Persistence & Reliability
 - [ ] Database for settings storage
 - [ ] Automatic token refresh
-- [ ] User preferences
-- [ ] Dashboard templates
+- [ ] User preferences and profiles
+- [ ] Backup and restore functionality
+- [ ] Enhanced error recovery
 
-### Phase 3: Enhanced Features
-- [ ] Bulk operations
-- [ ] Excel export
-- [ ] Custom metrics
+### Phase 4: Advanced Analytics
+- [ ] Custom metrics and KPIs
+- [ ] Time-based reporting
+- [ ] Dashboard analytics
+- [ ] Performance insights
+- [ ] Trend analysis
+
+### Phase 5: Enterprise Features
+- [ ] User authentication and roles
+- [ ] Team collaboration features
 - [ ] Webhooks for real-time updates
-- [ ] Email notifications
+- [ ] Email notifications and alerts
+- [ ] API integrations beyond Accelo
 
-### Phase 4: Multi-tenant
-- [ ] User authentication
-- [ ] Role-based access
-- [ ] Multiple dashboards
-- [ ] Sharing capabilities
-
-### Phase 5: Advanced
-- [ ] Mobile app
-- [ ] Offline mode
-- [ ] Advanced analytics
-- [ ] Custom integrations
+### Phase 6: Platform Expansion
+- [ ] Mobile responsive design
+- [ ] Offline mode capabilities
+- [ ] Custom integrations marketplace
+- [ ] Third-party app ecosystem
 
 ## Contributing
 
