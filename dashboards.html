@@ -318,6 +318,7 @@
     <script src="/src/api-client.js"></script>
     <script src="/src/components.js"></script>
     <script src="/src/dashboard-manager.js"></script>
+    <script src="/src/dashboard-name-generator.js"></script>
     
     <script>
         let editingDashboardId = null;
@@ -423,8 +424,13 @@
             try {
                 UIComponents.showLoading();
                 
-                // Create dashboard with temporary name
-                const dashboard = await window.dashboardManager.createDashboard('Untitled Dashboard', true);
+                // Generate a fun name for the new dashboard
+                const dashboardName = window.dashboardNameGenerator ? 
+                    window.dashboardNameGenerator.generateName() : 
+                    'Untitled Dashboard';
+                
+                // Create dashboard with fun name
+                const dashboard = await window.dashboardManager.createDashboard(dashboardName, true);
                 
                 // Redirect to the new dashboard with a flag to show rename modal
                 window.location.href = `/?dashboard=${dashboard.id}&rename=true`;
@@ -522,6 +528,22 @@
             if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
             return 'Just now';
         }
+
+        // Fun utility function for testing name generation
+        // Users can call this in the browser console: generateFunNames(5)
+        window.generateFunNames = function(count = 10) {
+            if (window.dashboardNameGenerator) {
+                console.log('🎲 Generated Dashboard Names:');
+                const names = window.dashboardNameGenerator.generateMultipleNames(count);
+                names.forEach((name, index) => {
+                    console.log(`${index + 1}. ${name}`);
+                });
+                return names;
+            } else {
+                console.warn('Dashboard name generator not loaded');
+                return [];
+            }
+        };
 
         // Event listeners
         document.addEventListener('DOMContentLoaded', initDashboards);
