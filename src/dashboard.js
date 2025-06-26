@@ -9,6 +9,10 @@ class Dashboard {
         this.searchTimeout = null;
         this.selectedItems = new Set();
         
+        // Dashboard management
+        this.currentDashboardId = null;
+        this.companyColors = {};
+        
         // Modal state for two-step flow
         this.modalStep = 1; // 1 = select companies, 2 = select projects/agreements
         this.selectedCompanies = [];
@@ -39,6 +43,12 @@ class Dashboard {
             UIComponents.showLoading();
             await window.acceloAPI.init();
             
+            // Initialize dashboard manager
+            await window.dashboardManager.init();
+            
+            // Handle routing and dashboard selection
+            await this.handleRouting();
+            
             // Load saved dashboard state
             await this.loadDashboardState();
             
@@ -54,7 +64,7 @@ class Dashboard {
             
             // Apply saved company colors after rendering
             setTimeout(() => {
-                UIComponents.applySavedCompanyColors();
+                this.applySavedCompanyColors();
             }, 100);
             
             // Initialize over budget tickers
@@ -74,6 +84,148 @@ class Dashboard {
             UIComponents.hideLoading();
         }
     }
+
+    /**
+     * Handle routing for dashboard selection
+     */
+    async handleRouting() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const dashboardIdParam = urlParams.get('dashboard');
+        const shouldRename = urlParams.get('rename') === 'true';
+        
+        if (dashboardIdParam) {
+            // Validate dashboard exists
+            const dashboard = window.dashboardManager.getDashboard(dashboardIdParam);
+            if (dashboard) {
+                this.currentDashboardId = dashboardIdParam;
+                window.dashboardManager.setCurrentDashboard(dashboardIdParam);
+                window.dashboardManager.updateDashboardAccess(dashboardIdParam);
+                this.updateDashboardNameBadge(dashboard.name);
+                
+                // If rename flag is set, show rename modal after a brief delay
+                if (shouldRename) {
+                    setTimeout(() => {
+                        this.showDashboardRenameModal(dashboard.name);
+                    }, 500);
+                }
+            } else {
+                // Dashboard doesn't exist, redirect to dashboards page
+                window.location.href = '/dashboards.html';
+                return;
+            }
+        } else {
+            // No dashboard specified, check if we have a current dashboard
+            const currentDashboardId = window.dashboardManager.getCurrentDashboardId();
+            if (currentDashboardId) {
+                this.currentDashboardId = currentDashboardId;
+                const dashboard = window.dashboardManager.getDashboard(currentDashboardId);
+                if (dashboard) {
+                    this.updateDashboardNameBadge(dashboard.name);
+                }
+            } else {
+                // No current dashboard, redirect to dashboards page
+                window.location.href = '/dashboards.html';
+                return;
+            }
+        }
+    }
+
+    /**
+     * Update dashboard name badge in navbar
+     */
+    updateDashboardNameBadge(dashboardName) {
+        const context = document.getElementById('navbarDashboardContext');
+        const nameElement = document.getElementById('navbarDashboardName');
+        
+        if (context && nameElement) {
+            if (dashboardName && dashboardName.trim()) {
+                nameElement.textContent = dashboardName;
+                context.style.display = 'flex';
+                
+                // Add click handler for renaming
+                context.onclick = () => this.showDashboardRenameModal(dashboardName);
+            } else {
+                context.style.display = 'none';
+                context.onclick = null;
+            }
+        }
+    }
+
+    /**
+     * Show dashboard rename modal
+     */
+    showDashboardRenameModal(currentName) {
+        const modal = document.getElementById('dashboardRenameModal');
+        const input = document.getElementById('newDashboardName');
+        
+        if (modal && input) {
+            input.value = currentName;
+            modal.classList.add('show');
+            
+            // Focus and select text after modal appears
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 100);
+        }
+    }
+
+    /**
+     * Save dashboard rename
+     */
+    saveDashboardRename() {
+        const input = document.getElementById('newDashboardName');
+        const newName = input.value.trim();
+        
+        if (!newName) {
+            UIComponents.showToast('Please enter a dashboard name', 'error');
+            return;
+        }
+
+        try {
+            // Rename the dashboard
+            window.dashboardManager.renameDashboard(this.currentDashboardId, newName);
+            
+            // Update the navbar badge
+            this.updateDashboardNameBadge(newName);
+            
+            // Hide the modal
+            this.hideDashboardRenameModal();
+            
+            // Clear URL parameters
+            const url = new URL(window.location);
+            url.searchParams.delete('rename');
+            window.history.replaceState({}, document.title, url.toString());
+            
+            UIComponents.showToast('Dashboard renamed successfully', 'success');
+            
+        } catch (error) {
+            console.error('Failed to rename dashboard:', error);
+            UIComponents.showToast('Failed to rename dashboard: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * Cancel dashboard rename
+     */
+    cancelDashboardRename() {
+        this.hideDashboardRenameModal();
+        
+        // Clear URL parameters
+        const url = new URL(window.location);
+        url.searchParams.delete('rename');
+        window.history.replaceState({}, document.title, url.toString());
+    }
+
+    /**
+     * Hide dashboard rename modal
+     */
+    hideDashboardRenameModal() {
+        const modal = document.getElementById('dashboardRenameModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+    }
     
     /**
      * Set up event listeners
@@ -85,10 +237,26 @@ class Dashboard {
                 if (e.target.id === 'addItemModal') {
                     this.hideAddItemModal();
                 }
+                if (e.target.id === 'dashboardRenameModal') {
+                    this.cancelDashboardRename();
+                }
             },
             escapeKey: (e) => {
                 if (e.key === 'Escape') {
-                    this.hideAddItemModal();
+                    const renameModal = document.getElementById('dashboardRenameModal');
+                    if (renameModal && renameModal.classList.contains('show')) {
+                        this.cancelDashboardRename();
+                    } else {
+                        this.hideAddItemModal();
+                    }
+                }
+            },
+            enterKey: (e) => {
+                if (e.key === 'Enter') {
+                    const renameModal = document.getElementById('dashboardRenameModal');
+                    if (renameModal && renameModal.classList.contains('show')) {
+                        this.saveDashboardRename();
+                    }
                 }
             }
         };
@@ -96,8 +264,15 @@ class Dashboard {
         // Modal backdrop click
         document.getElementById('addItemModal').addEventListener('click', this.eventHandlers.modalClick);
         
-        // Escape key
+        // Rename modal backdrop click
+        const renameModal = document.getElementById('dashboardRenameModal');
+        if (renameModal) {
+            renameModal.addEventListener('click', this.eventHandlers.modalClick);
+        }
+        
+        // Keyboard events
         document.addEventListener('keydown', this.eventHandlers.escapeKey);
+        document.addEventListener('keydown', this.eventHandlers.enterKey);
         
         // Set up drag and drop event delegation
         this.setupDragAndDrop();
@@ -779,23 +954,20 @@ class Dashboard {
      * Load saved dashboard state
      */
     async loadDashboardState() {
-        const savedState = localStorage.getItem('accelo_dashboard_state');
-        if (savedState) {
-            try {
-                const state = JSON.parse(savedState);
-                this.dashboardData = state.dashboardData || [];
-                this.companyOrder = state.companyOrder || [];
-                
-                // If no company order saved, derive it from dashboardData
-                if (this.companyOrder.length === 0 && this.dashboardData.length > 0) {
-                    const companies = this.groupItemsByCompany();
-                    this.companyOrder = Object.keys(companies);
-                }
-            } catch (error) {
-                console.error('Failed to parse saved state:', error);
-                this.dashboardData = [];
-                this.companyOrder = [];
-            }
+        if (!this.currentDashboardId) {
+            console.error('No current dashboard ID set');
+            return;
+        }
+        
+        const dashboardData = window.dashboardManager.loadDashboardData(this.currentDashboardId);
+        this.dashboardData = dashboardData.dashboardData || [];
+        this.companyOrder = dashboardData.companyOrder || [];
+        this.companyColors = dashboardData.companyColors || {};
+        
+        // If no company order saved, derive it from dashboardData
+        if (this.companyOrder.length === 0 && this.dashboardData.length > 0) {
+            const companies = this.groupItemsByCompany();
+            this.companyOrder = Object.keys(companies);
         }
     }
     
@@ -803,12 +975,18 @@ class Dashboard {
      * Save dashboard state
      */
     saveDashboardState() {
+        if (!this.currentDashboardId) {
+            console.error('No current dashboard ID set');
+            return;
+        }
+        
         const state = {
             dashboardData: this.dashboardData,
             companyOrder: this.companyOrder,
-            lastUpdated: new Date().toISOString()
+            companyColors: this.companyColors
         };
-        localStorage.setItem('accelo_dashboard_state', JSON.stringify(state));
+        
+        window.dashboardManager.saveDashboardData(this.currentDashboardId, state);
     }
     
     /**
@@ -853,7 +1031,7 @@ class Dashboard {
             
             // Reapply saved company colors after rendering
             setTimeout(() => {
-                UIComponents.applySavedCompanyColors();
+                this.applySavedCompanyColors();
             }, 50);
             
             UIComponents.showToast('Dashboard data refreshed successfully', 'success');
@@ -2341,7 +2519,7 @@ class Dashboard {
             
             // Reapply saved company colors after rendering
             setTimeout(() => {
-                UIComponents.applySavedCompanyColors();
+                this.applySavedCompanyColors();
             }, 50);
             
             UIComponents.showToast(`${type === 'project' ? 'Project' : 'Agreement'} removed successfully`, 'success');
@@ -2350,6 +2528,86 @@ class Dashboard {
             console.error('Failed to remove item:', error);
             UIComponents.showToast('Failed to remove item: ' + error.message, 'error');
         }
+    }
+
+    /**
+     * Apply saved company colors for this dashboard
+     */
+    applySavedCompanyColors() {
+        if (!this.companyColors || Object.keys(this.companyColors).length === 0) {
+            return;
+        }
+
+        Object.entries(this.companyColors).forEach(([companyId, colorData]) => {
+            if (colorData && colorData.value && colorData.contrast) {
+                this.applyCompanyColor(companyId, colorData.value, colorData.contrast);
+            }
+        });
+    }
+
+    /**
+     * Apply company color to all elements
+     */
+    applyCompanyColor(companyId, colorValue, contrastColor) {
+        // Apply to company block styling
+        const companyElement = document.querySelector(`[data-company-id="${companyId}"]`);
+        if (companyElement) {
+            if (colorValue) {
+                // Apply a subtle colored border to the company block
+                companyElement.style.borderColor = colorValue;
+                companyElement.style.background = `linear-gradient(135deg, ${colorValue} 0%, ${colorValue}dd 100%)`;
+            } else {
+                // Reset to default styling
+                companyElement.style.borderColor = '';
+                companyElement.style.background = '';
+            }
+        }
+
+        // Apply to progress blocks for this company
+        const progressBlocks = document.querySelectorAll('.compact-progress-block');
+        progressBlocks.forEach(block => {
+            // Check if this block belongs to the company
+            const blockCompanyId = block.dataset.companyId;
+            if (blockCompanyId == companyId) {
+                if (colorValue) {
+                    // Apply company color to the left border bar via CSS custom property
+                    block.style.setProperty('--border-color', colorValue);
+                } else {
+                    // Reset to default
+                    block.style.removeProperty('--border-color');
+                }
+            }
+        });
+    }
+
+    /**
+     * Save company color for this dashboard
+     */
+    saveCompanyColor(companyId, colorValue, contrastColor, colorName) {
+        if (!this.companyColors) {
+            this.companyColors = {};
+        }
+        
+        this.companyColors[companyId] = {
+            value: colorValue,
+            contrast: contrastColor,
+            name: colorName
+        };
+        
+        this.saveDashboardState();
+    }
+
+    /**
+     * Remove company color for this dashboard
+     */
+    removeCompanyColor(companyId) {
+        if (this.companyColors && this.companyColors[companyId]) {
+            delete this.companyColors[companyId];
+            this.saveDashboardState();
+        }
+        
+        // Reset to default styling - use applyCompanyColor with null values
+        this.applyCompanyColor(companyId, null, null);
     }
 
 }
@@ -2362,3 +2620,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Export to window for access from HTML
 window.dashboard = dashboard;
+
+// Global functions for HTML onclick handlers
+window.saveDashboardRename = () => dashboard.saveDashboardRename();
+window.cancelDashboardRename = () => dashboard.cancelDashboardRename();

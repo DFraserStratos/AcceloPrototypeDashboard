@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboards - Orbit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/styles/main.css">
+    <link rel="stylesheet" href="/styles/dashboard.css">
+    <style>
+        .dashboards-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            margin-top: 48px; /* Account for fixed navbar */
+        }
+
+        .dashboards-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .dashboards-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .dashboards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .dashboard-card {
+            background: var(--card-background);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .dashboard-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .dashboard-card.create-new {
+            border: 2px dashed var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            text-align: center;
+        }
+
+        .dashboard-card.create-new:hover {
+            border-color: var(--primary-color);
+            background: var(--hover-background);
+        }
+
+        .dashboard-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .dashboard-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        .dashboard-meta {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .dashboard-stats {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .dashboard-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .dashboard-actions {
+            display: flex;
+            gap: 0.5rem;
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .dashboard-card:hover .dashboard-actions {
+            opacity: 1;
+        }
+
+        .create-new-icon {
+            font-size: 3rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .create-new-text {
+            font-size: 1.125rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .create-new-description {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .dashboard-card.current-dashboard {
+            border-color: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color)10, var(--card-background));
+        }
+
+        .current-dashboard-badge {
+            position: absolute;
+            top: -8px;
+            right: 1rem;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* Modal styles */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-backdrop.show {
+            display: flex;
+        }
+
+        .dashboard-modal {
+            background: var(--card-background);
+            border-radius: 12px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--input-background);
+            color: var(--text-primary);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.1);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-logo">
+            <img src="/orbit_logo3.png" alt="Orbit" class="logo-image">
+            <span class="logo-text">Orbit</span>
+        </div>
+        <div class="navbar-nav">
+            <a href="#" class="btn btn-ghost navbar-link disabled" title="Coming Soon">
+                <i class="fa-solid fa-comments"></i>
+                Chat
+            </a>
+            <a href="/dashboards.html" class="btn btn-ghost navbar-link active">
+                <i class="fa-solid fa-chart-line"></i>
+                Dashboards
+            </a>
+            <a href="#" class="btn btn-ghost navbar-link disabled" title="Coming Soon">
+                <i class="fa-solid fa-chart-bar"></i>
+                Reports
+            </a>
+        </div>
+        <div class="navbar-actions">
+            <a href="/settings" class="btn btn-icon btn-ghost" title="Settings">
+                <i class="fa-solid fa-gear"></i>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="dashboards-container">
+        <div class="dashboards-header">
+            <h1 class="dashboards-title">Dashboards</h1>
+            <button class="btn btn-primary" onclick="showCreateDashboardModal()">
+                <i class="fa-solid fa-plus"></i>
+                Create Dashboard
+            </button>
+        </div>
+
+        <div id="dashboardsGrid" class="dashboards-grid">
+            <!-- Dashboards will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Create/Edit Dashboard Modal -->
+    <div id="dashboardModal" class="modal-backdrop">
+        <div class="dashboard-modal">
+            <div class="modal-header">
+                <h2 id="modalTitle" class="modal-title">Create Dashboard</h2>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="dashboardName" class="form-label">Dashboard Name</label>
+                    <input type="text" id="dashboardName" class="form-input" placeholder="Enter dashboard name..." maxlength="50">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="hideModal()">Cancel</button>
+                <button id="modalSaveBtn" class="btn btn-primary" onclick="saveDashboard()">Create Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay d-none">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/src/api-client.js"></script>
+    <script src="/src/components.js"></script>
+    <script src="/src/dashboard-manager.js"></script>
+    
+    <script>
+        let editingDashboardId = null;
+
+        // Initialize the page
+        async function initDashboards() {
+            try {
+                UIComponents.showLoading();
+                await window.dashboardManager.init();
+                await renderDashboards();
+            } catch (error) {
+                console.error('Failed to initialize dashboards:', error);
+                UIComponents.showToast('Failed to load dashboards: ' + error.message, 'error');
+            } finally {
+                UIComponents.hideLoading();
+            }
+        }
+
+        // Render all dashboards
+        async function renderDashboards() {
+            const grid = document.getElementById('dashboardsGrid');
+            const dashboards = window.dashboardManager.getAllDashboards();
+            const currentDashboardId = window.dashboardManager.getCurrentDashboardId();
+
+            if (dashboards.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                        <div class="empty-state-title">No Dashboards Found</div>
+                        <div class="empty-state-description">
+                            Create your first dashboard to get started tracking your projects and agreements.
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = '';
+
+            // Add create new dashboard card
+            const createCard = document.createElement('div');
+            createCard.className = 'dashboard-card create-new';
+            createCard.onclick = showCreateDashboardModal;
+            createCard.innerHTML = `
+                <div class="create-new-icon">
+                    <i class="fa-solid fa-plus"></i>
+                </div>
+                <div class="create-new-text">Create New Dashboard</div>
+                <div class="create-new-description">Start tracking a new set of projects and agreements</div>
+            `;
+            grid.appendChild(createCard);
+
+            // Add existing dashboards
+            for (const dashboard of dashboards) {
+                const dashboardData = window.dashboardManager.loadDashboardData(dashboard.id);
+                const itemCount = dashboardData.dashboardData.length;
+                const companyCount = [...new Set(dashboardData.dashboardData.map(item => item.company_id))].length;
+
+                const card = document.createElement('div');
+                card.className = `dashboard-card ${dashboard.id === currentDashboardId ? 'current-dashboard' : ''}`;
+                card.onclick = () => openDashboard(dashboard.id);
+
+                card.innerHTML = `
+                    ${dashboard.id === currentDashboardId ? '<div class="current-dashboard-badge">Current</div>' : ''}
+                    <div class="dashboard-card-header">
+                        <div>
+                            <h3 class="dashboard-name">${UIComponents.escapeHtml(dashboard.name)}</h3>
+                            <div class="dashboard-meta">
+                                Last updated ${formatRelativeTime(dashboard.lastUpdated)}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dashboard-stats">
+                        <div class="dashboard-stat">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>${itemCount} items</span>
+                        </div>
+                        <div class="dashboard-stat">
+                            <i class="fa-solid fa-building"></i>
+                            <span>${companyCount} companies</span>
+                        </div>
+                    </div>
+                    <div class="dashboard-actions">
+                        <button class="btn btn-icon btn-ghost" onclick="event.stopPropagation(); editDashboard('${dashboard.id}')" title="Rename dashboard">
+                            <i class="fa-solid fa-edit"></i>
+                        </button>
+                        ${dashboards.length > 1 ? `
+                        <button class="btn btn-icon btn-ghost btn-danger" onclick="event.stopPropagation(); deleteDashboard('${dashboard.id}')" title="Delete dashboard">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                        ` : ''}
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            }
+        }
+
+        // Create dashboard immediately and redirect
+        async function showCreateDashboardModal() {
+            try {
+                UIComponents.showLoading();
+                
+                // Create dashboard with temporary name
+                const dashboard = await window.dashboardManager.createDashboard('Untitled Dashboard', true);
+                
+                // Redirect to the new dashboard with a flag to show rename modal
+                window.location.href = `/?dashboard=${dashboard.id}&rename=true`;
+                
+            } catch (error) {
+                console.error('Failed to create dashboard:', error);
+                UIComponents.showToast('Failed to create dashboard: ' + error.message, 'error');
+                UIComponents.hideLoading();
+            }
+        }
+
+        // Edit dashboard
+        function editDashboard(dashboardId) {
+            const dashboard = window.dashboardManager.getDashboard(dashboardId);
+            if (!dashboard) return;
+
+            editingDashboardId = dashboardId;
+            document.getElementById('modalTitle').textContent = 'Rename Dashboard';
+            document.getElementById('modalSaveBtn').textContent = 'Save Changes';
+            document.getElementById('dashboardName').value = dashboard.name;
+            document.getElementById('dashboardModal').classList.add('show');
+            setTimeout(() => document.getElementById('dashboardName').focus(), 100);
+        }
+
+        // Save dashboard (create or rename)
+        async function saveDashboard() {
+            const name = document.getElementById('dashboardName').value.trim();
+            
+            if (!name) {
+                UIComponents.showToast('Please enter a dashboard name', 'error');
+                return;
+            }
+
+            try {
+                if (editingDashboardId) {
+                    // Rename existing dashboard
+                    window.dashboardManager.renameDashboard(editingDashboardId, name);
+                    UIComponents.showToast('Dashboard renamed successfully', 'success');
+                    hideModal();
+                    await renderDashboards();
+                }
+            } catch (error) {
+                console.error('Failed to save dashboard:', error);
+                UIComponents.showToast('Failed to save dashboard: ' + error.message, 'error');
+            }
+        }
+
+        // Delete dashboard
+        function deleteDashboard(dashboardId) {
+            const dashboard = window.dashboardManager.getDashboard(dashboardId);
+            if (!dashboard) return;
+
+            UIComponents.showConfirmationDialog(
+                'Delete Dashboard',
+                `Are you sure you want to delete "${dashboard.name}"? This action cannot be undone.`,
+                async () => {
+                    try {
+                        window.dashboardManager.deleteDashboard(dashboardId);
+                        UIComponents.showToast('Dashboard deleted successfully', 'success');
+                        await renderDashboards();
+                    } catch (error) {
+                        console.error('Failed to delete dashboard:', error);
+                        UIComponents.showToast('Failed to delete dashboard: ' + error.message, 'error');
+                    }
+                }
+            );
+        }
+
+        // Open dashboard
+        function openDashboard(dashboardId) {
+            window.dashboardManager.setCurrentDashboard(dashboardId);
+            window.dashboardManager.updateDashboardAccess(dashboardId);
+            window.location.href = `/?dashboard=${dashboardId}`;
+        }
+
+        // Hide modal
+        function hideModal() {
+            document.getElementById('dashboardModal').classList.remove('show');
+            editingDashboardId = null;
+        }
+
+        // Format relative time
+        function formatRelativeTime(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+            if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+            if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+            return 'Just now';
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', initDashboards);
+
+        // Modal keyboard handling
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                hideModal();
+            } else if (e.key === 'Enter' && document.getElementById('dashboardModal').classList.contains('show')) {
+                saveDashboard();
+            }
+        });
+
+        // Modal backdrop click
+        document.getElementById('dashboardModal').addEventListener('click', (e) => {
+            if (e.target.id === 'dashboardModal') {
+                hideModal();
+            }
+        });
+    </script>
+</body>
+</html> 

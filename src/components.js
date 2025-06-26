@@ -500,17 +500,22 @@ class UIComponents {
      * Select a color for a company
      */
     static selectCompanyColor(companyId, colorValue, contrastColor, colorName) {
-        const savedColors = this.getSavedCompanyColors();
-        savedColors[companyId] = {
-            value: colorValue,
-            contrast: contrastColor,
-            name: colorName
-        };
-        
-        localStorage.setItem('companyColors', JSON.stringify(savedColors));
-        
-        // Update the UI
-        this.applyCompanyColor(companyId, colorValue, contrastColor);
+        // Use dashboard's color management if available
+        if (window.dashboard && window.dashboard.saveCompanyColor) {
+            window.dashboard.saveCompanyColor(companyId, colorValue, contrastColor, colorName);
+            window.dashboard.applyCompanyColor(companyId, colorValue, contrastColor);
+        } else {
+            // Fallback to global colors (for backwards compatibility)
+            const savedColors = this.getSavedCompanyColors();
+            savedColors[companyId] = {
+                value: colorValue,
+                contrast: contrastColor,
+                name: colorName
+            };
+            localStorage.setItem('companyColors', JSON.stringify(savedColors));
+            this.applyCompanyColor(companyId, colorValue, contrastColor);
+        }
+
         this.hideColorPicker();
         
         // Show success toast
@@ -521,12 +526,17 @@ class UIComponents {
      * Reset company color to default
      */
     static resetCompanyColor(companyId) {
-        const savedColors = this.getSavedCompanyColors();
-        delete savedColors[companyId];
-        localStorage.setItem('companyColors', JSON.stringify(savedColors));
+        // Use dashboard's color management if available
+        if (window.dashboard && window.dashboard.removeCompanyColor) {
+            window.dashboard.removeCompanyColor(companyId);
+        } else {
+            // Fallback to global colors (for backwards compatibility)
+            const savedColors = this.getSavedCompanyColors();
+            delete savedColors[companyId];
+            localStorage.setItem('companyColors', JSON.stringify(savedColors));
+            this.applyCompanyColor(companyId, null, null);
+        }
         
-        // Reset the UI to default styling
-        this.applyCompanyColor(companyId, null, null);
         this.hideColorPicker();
         
         this.showToast('Reset to default theme', 'success');
@@ -601,6 +611,26 @@ class UIComponents {
         Object.entries(savedColors).forEach(([companyId, color]) => {
             this.applyCompanyColor(companyId, color.value, color.contrast);
         });
+    }
+
+    /**
+     * Create an empty state element
+     */
+    static createEmptyState(title, description, iconClass = 'fa-chart-line') {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'empty-state';
+        
+        emptyState.innerHTML = `
+            <div class="empty-state-icon">
+                <i class="fa-solid ${iconClass}"></i>
+            </div>
+            <div class="empty-state-title">${this.escapeHtml(title)}</div>
+            <div class="empty-state-description">
+                ${this.escapeHtml(description)}
+            </div>
+        `;
+        
+        return emptyState;
     }
 }
 

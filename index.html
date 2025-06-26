@@ -18,6 +18,24 @@
             <img src="/orbit_logo3.png" alt="Orbit" class="logo-image">
             <span class="logo-text">Orbit</span>
         </div>
+        <div class="navbar-dashboard-context" id="navbarDashboardContext" style="display: none;">
+            <i class="fa-solid fa-chart-simple"></i>
+            <span id="navbarDashboardName">Dashboard Name</span>
+        </div>
+        <div class="navbar-nav">
+            <a href="#" class="btn btn-ghost navbar-link disabled" title="Coming Soon">
+                <i class="fa-solid fa-comments"></i>
+                Chat
+            </a>
+            <a href="/dashboards.html" class="btn btn-ghost navbar-link">
+                <i class="fa-solid fa-chart-line"></i>
+                Dashboards
+            </a>
+            <a href="#" class="btn btn-ghost navbar-link disabled" title="Coming Soon">
+                <i class="fa-solid fa-chart-bar"></i>
+                Reports
+            </a>
+        </div>
         <div class="navbar-actions">
             <button class="btn btn-primary" onclick="dashboard.showAddItemModal()">
                 <span class="icon-add"></span>
@@ -95,6 +113,25 @@
         </div>
     </div>
 
+    <!-- Dashboard Rename Modal -->
+    <div id="dashboardRenameModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Name Your Dashboard</h2>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newDashboardName">Dashboard Name</label>
+                    <input type="text" id="newDashboardName" placeholder="Enter dashboard name..." maxlength="50">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="cancelDashboardRename()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveDashboardRename()">Save Name</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay d-none">
         <div class="spinner"></div>
@@ -103,6 +140,7 @@
     <!-- Scripts -->
     <script src="/src/api-client.js"></script>
     <script src="/src/components.js"></script>
+    <script src="/src/dashboard-manager.js"></script>
     <script src="/src/dashboard.js"></script>
 </body>
 </html>

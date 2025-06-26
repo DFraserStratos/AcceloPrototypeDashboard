@@ -21,6 +21,10 @@ app.get('/settings', (req, res) => {
     res.sendFile(path.join(__dirname, 'settings.html'));
 });
 
+app.get('/dashboards.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboards.html'));
+});
+
 // Serve src and styles directories
 app.use('/src', express.static(path.join(__dirname, 'src')));
 app.use('/styles', express.static(path.join(__dirname, 'styles')));
