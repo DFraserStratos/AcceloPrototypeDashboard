@@ -279,7 +279,7 @@
     <div class="dashboards-container">
         <div class="dashboards-header">
             <h1 class="dashboards-title">Dashboards</h1>
-            <button class="btn btn-primary" onclick="showCreateDashboardModal()">
+            <button class="btn btn-primary" onclick="createDashboardAndRedirect()">
                 <i class="fa-solid fa-plus"></i>
                 Create Dashboard
             </button>
@@ -304,7 +304,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-ghost" onclick="hideModal()">Cancel</button>
-                <button id="modalSaveBtn" class="btn btn-primary" onclick="saveDashboard()">Create Dashboard</button>
+                <button id="modalSaveBtn" class="btn btn-primary" onclick="renameDashboardFromModal()">Create Dashboard</button>
             </div>
         </div>
     </div>
@@ -362,7 +362,7 @@
             // Add create new dashboard card
             const createCard = document.createElement('div');
             createCard.className = 'dashboard-card create-new';
-            createCard.onclick = showCreateDashboardModal;
+            createCard.onclick = createDashboardAndRedirect;
             createCard.innerHTML = `
                 <div class="create-new-icon">
                     <i class="fa-solid fa-plus"></i>
@@ -380,7 +380,7 @@
 
                 const card = document.createElement('div');
                 card.className = `dashboard-card ${dashboard.id === currentDashboardId ? 'current-dashboard' : ''}`;
-                card.onclick = () => openDashboard(dashboard.id);
+                card.onclick = () => navigateToDashboard(dashboard.id);
 
                 card.innerHTML = `
                     ${dashboard.id === currentDashboardId ? '<div class="current-dashboard-badge">Current</div>' : ''}
@@ -403,7 +403,7 @@
                         </div>
                     </div>
                     <div class="dashboard-actions">
-                        <button class="btn btn-icon btn-ghost" onclick="event.stopPropagation(); editDashboard('${dashboard.id}')" title="Rename dashboard">
+                        <button class="btn btn-icon btn-ghost" onclick="event.stopPropagation(); showRenameDashboardModal('${dashboard.id}')" title="Rename dashboard">
                             <i class="fa-solid fa-edit"></i>
                         </button>
                         ${dashboards.length > 1 ? `
@@ -419,7 +419,7 @@
         }
 
         // Create dashboard immediately and redirect
-        async function showCreateDashboardModal() {
+        async function createDashboardAndRedirect() {
             try {
                 UIComponents.showLoading();
                 
@@ -436,8 +436,8 @@
             }
         }
 
-        // Edit dashboard
-        function editDashboard(dashboardId) {
+        // Show rename dashboard modal
+        function showRenameDashboardModal(dashboardId) {
             const dashboard = window.dashboardManager.getDashboard(dashboardId);
             if (!dashboard) return;
 
@@ -449,8 +449,8 @@
             setTimeout(() => document.getElementById('dashboardName').focus(), 100);
         }
 
-        // Save dashboard (create or rename)
-        async function saveDashboard() {
+        // Rename dashboard from modal
+        async function renameDashboardFromModal() {
             const name = document.getElementById('dashboardName').value.trim();
             
             if (!name) {
@@ -467,8 +467,8 @@
                     await renderDashboards();
                 }
             } catch (error) {
-                console.error('Failed to save dashboard:', error);
-                UIComponents.showToast('Failed to save dashboard: ' + error.message, 'error');
+                console.error('Failed to rename dashboard:', error);
+                UIComponents.showToast('Failed to rename dashboard: ' + error.message, 'error');
             }
         }
 
@@ -493,8 +493,8 @@
             );
         }
 
-        // Open dashboard
-        function openDashboard(dashboardId) {
+        // Navigate to dashboard and set as current
+        function navigateToDashboard(dashboardId) {
             window.dashboardManager.setCurrentDashboard(dashboardId);
             window.dashboardManager.updateDashboardAccess(dashboardId);
             window.location.href = `/?dashboard=${dashboardId}`;
@@ -531,7 +531,7 @@
             if (e.key === 'Escape') {
                 hideModal();
             } else if (e.key === 'Enter' && document.getElementById('dashboardModal').classList.contains('show')) {
-                saveDashboard();
+                renameDashboardFromModal();
             }
         });
 
