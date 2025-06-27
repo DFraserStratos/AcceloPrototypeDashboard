@@ -1,14 +1,14 @@
 {
-  "name": "orbit",
+  "name": "accelo-prototype-dashboard",
   "version": "1.0.0",
-  "description": "Orbit - Modern Project Management Dashboard",
+  "description": "AcceloPrototypeDashboard - Modern Project Management Dashboard",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
   },
   "keywords": [
-    "orbit",
+    "accelo-prototype-dashboard",
     "dashboard",
     "project-management"
   ],

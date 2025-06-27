@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Starting Orbit Dashboard..."
+echo "🚀 Starting AcceloPrototypeDashboard..."
 echo ""
 
 # Check if node is installed

@@ -1,4 +1,4 @@
-# Orbit Dashboard
+# AcceloPrototypeDashboard
 
 A modern project management dashboard application that integrates with Accelo to display companies, projects, and agreements with real-time progress tracking. Create and manage multiple dashboards for different teams, projects, or workflows.
 
@@ -83,7 +83,7 @@ A modern project management dashboard application that integrates with Accelo to
 
 ### Architecture Overview
 
-Orbit uses a three-tier architecture to work around browser CORS restrictions and provide a secure integration with Accelo:
+AcceloPrototypeDashboard uses a three-tier architecture to work around browser CORS restrictions and provide a secure integration with Accelo:
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -177,7 +177,7 @@ When a user clicks on a company:
 1. Log into your Accelo deployment as an administrator
 2. Navigate to **Configuration** → **API** → **Register Application**
 3. Fill in the form:
-   - **Application Name**: Your app name (e.g., "Orbit Dashboard Integration")
+   - **Application Name**: Your app name (e.g., "AcceloPrototypeDashboard Integration")
    - **Application Type**: Select "Service"
    - **Execute Application As**: Select which user the API should run as
 4. Save and copy the Client ID and Client Secret immediately
@@ -186,8 +186,8 @@ When a user clicks on a company:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/DFraserStratos/orbit.git
-   cd orbit
+   git clone https://github.com/DFraserStratos/AcceloPrototypeDashboard.git
+   cd AcceloPrototypeDashboard
    ```
 
 2. **Install dependencies**
@@ -239,7 +239,7 @@ When a user clicks on a company:
 The dashboard features a modern navigation bar and company-grouped layout:
 
 1. **Navigation Bar**: 
-   - **Brand**: Orbit logo and name
+   - **Brand**: AcceloPrototypeDashboard logo and name
    - **Dashboard Context**: Current dashboard name with rename functionality and compact action buttons (refresh, add items)
    - **Navigation**: Chat (coming soon), Dashboards, Reports (coming soon)
    - **Settings**: Global settings access
@@ -751,7 +751,7 @@ This ensures accurate progress calculations that match Accelo's interface exactl
 ## Project Structure
 
 ```
-orbit/
+AcceloPrototypeDashboard/
 ├── index.html              # Main dashboard HTML
 ├── settings.html           # Settings page HTML
 ├── server.js               # Express proxy server
