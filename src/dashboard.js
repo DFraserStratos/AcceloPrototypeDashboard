@@ -2667,19 +2667,21 @@ class Dashboard {
         try {
             const contentRect = emptyStateContent.getBoundingClientRect();
             const buttonRect = addItemsButton.getBoundingClientRect();
-            const isMobile = window.innerWidth <= 768;
             
-            // FIXED: Arrow should go FROM content TO button
-            // Start point: FROM content box (where user is reading)
-            let startX, startY;
-            if (isMobile) {
-                // Mobile: Arrow starts from top of content box
-                startX = contentRect.left + contentRect.width / 2;
-                startY = contentRect.top - 15;
-            } else {
-                // Desktop: Arrow starts from left side of content box  
+            // Determine arrow start position based on button position relative to content box
+            let startX, startY, startFromTop;
+            
+            // If button is to the left of the content box's left edge, start from left side
+            if (buttonRect.left + buttonRect.width / 2 < contentRect.left) {
+                // Arrow starts from left side of content box
                 startX = contentRect.left - 15;
                 startY = contentRect.top + contentRect.height / 2;
+                startFromTop = false;
+            } else {
+                // Arrow starts from top of content box
+                startX = contentRect.left + contentRect.width / 2;
+                startY = contentRect.top - 15;
+                startFromTop = true;
             }
             
             // End point: BELOW the nav bar, pointing UP to the button
@@ -2687,25 +2689,20 @@ class Dashboard {
             const endY = 48 + 15; // 48px navbar height + 15px padding below nav
             
             // Create curved tapered arrow body
-            const bodyPath = this.createCurvedTaperedArrowPath(startX, startY, endX, endY, isMobile);
+            const bodyPath = this.createCurvedTaperedArrowPath(startX, startY, endX, endY, startFromTop);
             arrowBody.setAttribute('d', bodyPath);
             
             // Create arrow head pointing toward the button
             const headPath = this.createArrowHeadPointingToButton(startX, startY, endX, endY);
             arrowHead.setAttribute('d', headPath);
             
-            console.log('🎯 ARROW DEBUG (Gap Fix Applied):', { 
-                '1_StartPoint': { startX, startY }, 
-                '2_CurveEndPoint': { endX, endY },
-                '3_ArrowHeadTip': { endX, endY },
-                '4_GapEliminated': 'YES - curve forced to end at exact target',
-                '5_ConnectionStatus': 'Body and head at identical coordinates',
-                '6_ButtonLocation': {
-                    centerX: buttonRect.left + buttonRect.width / 2,
-                    top: buttonRect.top,
-                    bottom: buttonRect.bottom
-                },
-                '7_IsMobile': isMobile
+            console.log('🎯 ARROW DEBUG (Adaptive Positioning):', { 
+                '1_ButtonCenter': buttonRect.left + buttonRect.width / 2,
+                '2_ContentLeft': contentRect.left,
+                '3_StartFromTop': startFromTop,
+                '4_StartPoint': { startX, startY }, 
+                '5_EndPoint': { endX, endY },
+                '6_Decision': startFromTop ? 'Button right of content - start from top' : 'Button left of content - start from left'
             });
             
         } catch (error) {
@@ -2716,7 +2713,7 @@ class Dashboard {
     /**
      * Create a curved tapered arrow path that starts thin and gets thicker toward the head
      */
-    createCurvedTaperedArrowPath(startX, startY, endX, endY, isMobile) {
+    createCurvedTaperedArrowPath(startX, startY, endX, endY, startFromTop) {
         const startWidth = 2;  // Start thin at content area
         const endWidth = 12;   // End thick where arrowhead begins
         
@@ -2724,14 +2721,14 @@ class Dashboard {
         const deltaX = endX - startX;
         const deltaY = endY - startY;
         
-        // Create curve that goes the RIGHT way (inward toward content)
+        // Create curve based on starting position
         let controlX, controlY;
-        if (isMobile) {
-            // Mobile: Curve sideways from top
+        if (startFromTop) {
+            // Starting from top of content box - curve sideways then up
             controlX = startX + deltaX * 0.5;
             controlY = startY + deltaY * 0.3;
         } else {
-            // Desktop: Curve INWARD (toward the content box) then up to button
+            // Starting from left side of content box - curve inward then up
             controlX = startX + deltaX * 0.7; // Pull control point to the RIGHT (toward content)
             controlY = startY + deltaY * 0.2 - 100; // Arc upward but inward
         }
