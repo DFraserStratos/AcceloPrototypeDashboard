@@ -18,7 +18,6 @@ A modern project management dashboard application that integrates with Accelo to
 - [Security Considerations](#security-considerations)
 - [Troubleshooting](#troubleshooting)
 - [Current Limitations](#current-limitations)
-- [Roadmap](#roadmap)
 
 ## Features
 
@@ -1108,54 +1107,6 @@ Check terminal for:
 - New CSS architecture for company-grouped layout
 - Better responsive design for different screen sizes
 
-## Roadmap
-
-### Phase 1: Core Platform ✅ (Completed)
-- ✅ Core dashboard functionality
-- ✅ Service Application auth
-- ✅ Progress tracking
-- ✅ Search and add
-- ✅ Drag & drop interface
-- ✅ Company-grouped layout
-- ✅ Multi-dashboard management
-- ✅ Modern navigation system
-
-### Phase 2: Enhanced Features (In Progress)
-- ✅ Per-dashboard company colors
-- ✅ Dashboard statistics and management
-- ✅ Automatic data migration
-- [ ] Chat integration (navigation placeholder ready)
-- [ ] Reports system (navigation placeholder ready)
-- [ ] Dashboard templates and sharing
-- [ ] Bulk import/export operations
-
-### Phase 3: Persistence & Reliability
-- [ ] Database for settings storage
-- [ ] Automatic token refresh
-- [ ] User preferences and profiles
-- [ ] Backup and restore functionality
-- [ ] Enhanced error recovery
-
-### Phase 4: Advanced Analytics
-- [ ] Custom metrics and KPIs
-- [ ] Time-based reporting
-- [ ] Dashboard analytics
-- [ ] Performance insights
-- [ ] Trend analysis
-
-### Phase 5: Enterprise Features
-- [ ] User authentication and roles
-- [ ] Team collaboration features
-- [ ] Webhooks for real-time updates
-- [ ] Email notifications and alerts
-- [ ] API integrations beyond Accelo
-
-### Phase 6: Platform Expansion
-- [ ] Mobile responsive design
-- [ ] Offline mode capabilities
-- [ ] Custom integrations marketplace
-- [ ] Third-party app ecosystem
-
 ## Contributing
 
 1. Fork the repository
@@ -1197,39 +1148,3 @@ MIT License - See LICENSE file for details
 ---
 
 *This dashboard is not officially affiliated with or endorsed by Accelo.*
-
-### Agreement Budget Types
-
-The dashboard now properly supports different types of agreements based on their Period Budget setting in Accelo:
-
-#### Time Budget Agreements
-- **Display**: Shows as "Agreement | Time Budget"
-- **Features**: Progress bar showing hours used vs. allocated (e.g., "14h 30m / 30h 0m")
-- **Usage**: Same as before - displays time allowance with progress tracking
-- **Example**: Seeds Online Support retainer with 30 hours per month
-
-#### Value Budget Agreements  
-- **Display**: Shows as "Agreement | Value Budget"
-- **Features**: Progress bar showing monetary value used vs. allocated (e.g., "$1,250.00 / $5,000.00")
-- **Usage**: Tracks dollar amounts spent against budget rather than time
-- **Example**: Fixed-price monthly support contract
-
-#### No Budget Agreements (Time & Materials)
-- **Display**: Shows as "Agreement" (no budget type suffix)
-- **Features**: No progress bar - simply shows time worked in current period
-- **Usage**: Displays "Xh Ym worked" to show billable time logged
-- **Example**: Alpine P | LMS Reactive Support Time & Materials
-
-#### Technical Implementation
-
-The system automatically detects budget type based on the Accelo period data:
-- **Time Budget**: `currentPeriod.allowance.billable > 0`
-- **Value Budget**: `currentPeriod.allowance.value` or `currentPeriod.allowance.amount > 0`
-- **No Budget**: No allowance data or empty allowance
-
-Budget type detection occurs in:
-- `src/api-client.js` - `getAgreementUsage()` method
-- `src/dashboard.js` - `createCompactProgressBlock()` method  
-- `server.js` - Chat API agreement endpoint
-
-### Project Budget Handling

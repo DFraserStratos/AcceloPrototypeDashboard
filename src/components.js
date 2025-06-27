@@ -614,6 +614,40 @@ class UIComponents {
     }
 
     /**
+     * Create an enhanced empty state element with dynamic arrow
+     */
+    static createEnhancedEmptyState(title, description, iconClass = 'fa-chart-line') {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'enhanced-empty-state';
+        emptyState.id = 'enhancedEmptyState';
+        
+        emptyState.innerHTML = `
+            <div class="empty-state-content">
+                <div class="empty-state-icon">
+                    <i class="fa-solid ${iconClass}"></i>
+                </div>
+                <div class="empty-state-title">${this.escapeHtml(title)}</div>
+                <div class="empty-state-description">
+                    ${this.escapeHtml(description)}
+                </div>
+            </div>
+            <svg class="empty-state-arrow" id="emptyStateArrow">
+                <defs>
+                    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="rgba(0,0,0,0.2)"/>
+                    </filter>
+                </defs>
+                <!-- Tapered arrow body -->
+                <path id="arrowBody" fill="black" filter="url(#dropShadow)" />
+                <!-- Arrow head -->
+                <path id="arrowHead" fill="black" filter="url(#dropShadow)" />
+            </svg>
+        `;
+        
+        return emptyState;
+    }
+
+    /**
      * Create an empty state element
      */
     static createEmptyState(title, description, iconClass = 'fa-chart-line') {
