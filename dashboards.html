@@ -47,6 +47,9 @@
             cursor: pointer;
             transition: all 0.2s ease;
             position: relative;
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
         }
 
         .dashboard-card:hover {
@@ -61,7 +64,6 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 200px;
             text-align: center;
         }
 
@@ -91,10 +93,20 @@
             margin-bottom: 1rem;
         }
 
+        .dashboard-bottom {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 1.5rem;
+            right: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         .dashboard-stats {
             display: flex;
             gap: 1rem;
-            margin-bottom: 1rem;
+            align-items: center;
         }
 
         .dashboard-stat {
@@ -108,9 +120,6 @@
         .dashboard-actions {
             display: flex;
             gap: 0.5rem;
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
             opacity: 0;
             transition: opacity 0.2s ease;
         }
@@ -370,7 +379,6 @@
                     <i class="fa-solid fa-plus"></i>
                 </div>
                 <div class="create-new-text">Create New Dashboard</div>
-                <div class="create-new-description">Start tracking a new set of projects and agreements</div>
             `;
             grid.appendChild(createCard);
 
@@ -394,24 +402,23 @@
                             </div>
                         </div>
                     </div>
-                    <div class="dashboard-stats">
-                        <div class="dashboard-stat">
-                            <i class="fa-solid fa-chart-line"></i>
-                            <span>${itemCount} items</span>
+                    <div class="dashboard-bottom">
+                        <div class="dashboard-stats">
+                            <div class="dashboard-stat">
+                                <i class="fa-solid fa-chart-line"></i>
+                                <span>${itemCount} items</span>
+                            </div>
+                            <div class="dashboard-stat">
+                                <i class="fa-solid fa-building"></i>
+                                <span>${companyCount} companies</span>
+                            </div>
                         </div>
-                        <div class="dashboard-stat">
-                            <i class="fa-solid fa-building"></i>
-                            <span>${companyCount} companies</span>
-                        </div>
-                    </div>
-                    <div class="dashboard-actions">
-                        <button class="btn btn-icon btn-ghost" onclick="event.stopPropagation(); showRenameDashboardModal('${dashboard.id}')" title="Rename dashboard">
-                            <i class="fa-solid fa-edit"></i>
-                        </button>
                         ${dashboards.length > 1 ? `
-                        <button class="btn btn-icon btn-ghost btn-danger" onclick="event.stopPropagation(); deleteDashboard('${dashboard.id}')" title="Delete dashboard">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
+                        <div class="dashboard-actions">
+                            <button class="btn btn-icon btn-ghost btn-danger delete-dashboard-btn" onclick="event.stopPropagation(); deleteDashboard('${dashboard.id}')" title="Delete dashboard">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
                         ` : ''}
                     </div>
                 `;
@@ -443,41 +450,7 @@
             }
         }
 
-        // Show rename dashboard modal
-        function showRenameDashboardModal(dashboardId) {
-            const dashboard = window.dashboardManager.getDashboard(dashboardId);
-            if (!dashboard) return;
-
-            editingDashboardId = dashboardId;
-            document.getElementById('modalTitle').textContent = 'Rename Dashboard';
-            document.getElementById('modalSaveBtn').textContent = 'Save Changes';
-            document.getElementById('dashboardName').value = dashboard.name;
-            document.getElementById('dashboardModal').classList.add('show');
-            setTimeout(() => document.getElementById('dashboardName').focus(), 100);
-        }
-
-        // Rename dashboard from modal
-        async function renameDashboardFromModal() {
-            const name = document.getElementById('dashboardName').value.trim();
-            
-            if (!name) {
-                UIComponents.showToast('Please enter a dashboard name', 'error');
-                return;
-            }
-
-            try {
-                if (editingDashboardId) {
-                    // Rename existing dashboard
-                    window.dashboardManager.renameDashboard(editingDashboardId, name);
-                    UIComponents.showToast('Dashboard renamed successfully', 'success');
-                    hideModal();
-                    await renderDashboards();
-                }
-            } catch (error) {
-                console.error('Failed to rename dashboard:', error);
-                UIComponents.showToast('Failed to rename dashboard: ' + error.message, 'error');
-            }
-        }
+        // Note: Dashboard renaming is now handled within individual dashboards
 
         // Delete dashboard
         function deleteDashboard(dashboardId) {
@@ -549,12 +522,10 @@
         // Event listeners
         document.addEventListener('DOMContentLoaded', initDashboards);
 
-        // Modal keyboard handling
+        // Modal keyboard handling (for future modal usage)
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 hideModal();
-            } else if (e.key === 'Enter' && document.getElementById('dashboardModal').classList.contains('show')) {
-                renameDashboardFromModal();
             }
         });
 
