@@ -5,22 +5,35 @@
 class UIComponents {
     // Color palette for client theming - very dark, muted tones for background zones
     static COLOR_PALETTE = [
+        // Row 1: Cool tones (Blues to Purples)
+        { name: 'Navy', value: '#0f172a', contrast: '#FFFFFF' },
         { name: 'Blue', value: '#1a365d', contrast: '#FFFFFF' },
         { name: 'Indigo', value: '#312e81', contrast: '#FFFFFF' },
+        { name: 'Sky', value: '#0c4a6e', contrast: '#FFFFFF' },
         { name: 'Purple', value: '#581c87', contrast: '#FFFFFF' },
+        { name: 'Violet', value: '#4c1d95', contrast: '#FFFFFF' },
         { name: 'Pink', value: '#831843', contrast: '#FFFFFF' },
+        { name: 'Magenta', value: '#701a75', contrast: '#FFFFFF' },
+        
+        // Row 2: Warm tones (Reds to Yellows)
         { name: 'Rose', value: '#9f1239', contrast: '#FFFFFF' },
         { name: 'Red', value: '#7f1d1d', contrast: '#FFFFFF' },
+        { name: 'Maroon', value: '#881337', contrast: '#FFFFFF' },
         { name: 'Orange', value: '#7c2d12', contrast: '#FFFFFF' },
+        { name: 'Brown', value: '#6b2c0d', contrast: '#FFFFFF' },
         { name: 'Amber', value: '#78350f', contrast: '#FFFFFF' },
         { name: 'Yellow', value: '#713f12', contrast: '#FFFFFF' },
+        { name: 'Olive', value: '#3f3f46', contrast: '#FFFFFF' },
+        
+        // Row 3: Greens to Neutrals
         { name: 'Lime', value: '#365314', contrast: '#FFFFFF' },
         { name: 'Green', value: '#14532d', contrast: '#FFFFFF' },
+        { name: 'Forest', value: '#052e16', contrast: '#FFFFFF' },
         { name: 'Emerald', value: '#064e3b', contrast: '#FFFFFF' },
         { name: 'Teal', value: '#134e4a', contrast: '#FFFFFF' },
         { name: 'Cyan', value: '#164e63', contrast: '#FFFFFF' },
-        { name: 'Sky', value: '#0c4a6e', contrast: '#FFFFFF' },
-        { name: 'Slate', value: '#334155', contrast: '#FFFFFF' }
+        { name: 'Slate', value: '#334155', contrast: '#FFFFFF' },
+        { name: 'Charcoal', value: '#1f2937', contrast: '#FFFFFF' }
     ];
 
     /**
@@ -434,9 +447,6 @@ class UIComponents {
             <div class="modal color-picker-modal-content">
                 <div class="modal-header">
                     <h3>Choose Color for ${this.escapeHtml(companyName)}</h3>
-                    <button class="btn btn-icon btn-ghost" onclick="UIComponents.hideColorPicker()">
-                        <i class="fa-solid fa-times"></i>
-                    </button>
                 </div>
                 <div class="modal-body">
                     <div class="color-palette">

@@ -837,7 +837,7 @@ class Dashboard {
         
         // Reapply saved company colors after rendering
         setTimeout(() => {
-            UIComponents.applySavedCompanyColors();
+            this.applySavedCompanyColors();
         }, 50);
     }
     
@@ -905,7 +905,7 @@ class Dashboard {
         
         // Reapply saved company colors after rendering
         setTimeout(() => {
-            UIComponents.applySavedCompanyColors();
+            this.applySavedCompanyColors();
         }, 50);
     }
     
@@ -1781,7 +1781,7 @@ class Dashboard {
             
             // Reapply saved company colors after rendering
             setTimeout(() => {
-                UIComponents.applySavedCompanyColors();
+                this.applySavedCompanyColors();
             }, 50);
             
             UIComponents.showToast(`Added ${itemsToAdd.length} item(s) to dashboard`, 'success');
