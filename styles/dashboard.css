@@ -256,8 +256,8 @@
 .global-split-resizer {
     position: absolute;
     top: 0;
-    left: var(--company-blocks-width, 120px);
-    width: 12px;
+    left: calc(var(--company-blocks-width, 120px) + 6px);
+    width: 16px;
     height: 100%;
     cursor: col-resize;
     background: transparent;
@@ -281,11 +281,8 @@
     box-shadow: 0 0 4px rgba(var(--primary-color-rgb), 0.3);
 }
 
-.company-grouped-layout:hover .global-split-resizer {
-    opacity: 1;
-}
-
 .global-split-resizer:hover {
+    opacity: 1;
     background: rgba(var(--primary-color-rgb), 0.1);
 }
 

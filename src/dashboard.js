@@ -1946,7 +1946,7 @@ class Dashboard {
         // Create the single global resizer
         const globalResizer = document.createElement('div');
         globalResizer.className = 'global-split-resizer';
-        globalResizer.style.left = companyWidth + 'px'; // Set initial position
+        globalResizer.style.left = (companyWidth + 6) + 'px'; // Set initial position
         
         mainSplitContainer.appendChild(allCompanyBlocksSection);
         mainSplitContainer.appendChild(globalResizer);
@@ -2023,7 +2023,7 @@ class Dashboard {
             // Update resizer position
             const resizer = document.querySelector('.global-split-resizer');
             if (resizer) {
-                resizer.style.left = newWidth + 'px';
+                resizer.style.left = (newWidth + 6) + 'px';
             }
             
             // Save preference
