@@ -7,20 +7,21 @@
 - [x] **Step 1.1: Extract ArrowManager** (COMPLETE, Checkpoint 1 PASSED)
 - [x] **Step 1.2: Extract TickerManager** (COMPLETE, Checkpoint 1.2 PASSED)
 - [x] **Step 1.3: Extract CompanyColorManager** (COMPLETE, Checkpoint 1.3 PASSED)
-- [ ] **Phase 2: EventManager** (**NEXT**)
-- [ ] Phase 3: UI Managers (RenderManager, ModalManager)
+- [x] **Phase 2: EventManager** (COMPLETE, Checkpoint 2 PASSED ✅)
+- [ ] **Phase 3: UI Managers (RenderManager, ModalManager)** (**NEXT**)
 - [ ] Phase 4: Core Logic Managers (DataManager, DragDropManager)
 - [ ] Phase 5: Final Cleanup
 
 **Last Checkpoint:**
-- ✅ Checkpoint 1.3: CompanyColorManager extraction and all related tests PASSED
+- ✅ **Checkpoint 2 PASSED**: EventManager extraction successful, all tests passed
 
 **Current Status:**
-- ✅ **Phase 1 COMPLETE**: All utility managers extracted successfully
-- 🎯 **Ready for Phase 2**: EventManager extraction (Medium risk)
+- ✅ **Phase 1 COMPLETE**: All utility managers extracted successfully (ArrowManager, TickerManager, CompanyColorManager)
+- ✅ **Phase 2 COMPLETE**: EventManager extraction successful, all functionality preserved
+- 🎯 **Ready for Phase 3**: UI Managers extraction (Medium-High risk)
   
 **Next Step:**
-- Proceed to Phase 2: Extract EventManager (see plan below)
+- Proceed to Phase 3: Extract RenderManager and ModalManager (see plan below)
 
 ---
 
@@ -115,10 +116,98 @@ Ready to proceed to Phase 2: EventManager extraction
 Must fix issues before proceeding to Phase 2
 ```
 
-**Current Extraction Progress:** 3/8 managers completed (37.5%)
+**Current Extraction Progress:** 4/8 managers completed (50%)
 - ✅ ArrowManager
 - ✅ TickerManager  
 - ✅ CompanyColorManager
+- ✅ EventManager
+
+---
+
+## 🧪 CHECKPOINT 2: EventManager Testing
+
+**⚠️ MANDATORY TESTING REQUIRED ⚠️**
+
+The EventManager has been successfully extracted from `dashboard.js`. Before proceeding to Phase 3, you must complete the following tests to ensure zero regressions.
+
+### What Was Changed:
+- ✅ **Extracted EventManager**: Created `src/managers/event-manager.js`
+- ✅ **Moved Event Handling**: Modal backdrop clicks and keyboard shortcuts moved to EventManager
+- ✅ **Updated Dashboard Class**: Delegates basic event handling to EventManager
+- ✅ **Preserved Drag/Drop**: All drag/drop functionality remains in Dashboard for Phase 4
+- ✅ **Maintained Pattern**: Consistent with other manager extractions
+
+### 🔍 Required Tests:
+
+#### Test 1: Dashboard Loads Without Errors
+1. Open dashboard in browser: `http://localhost:8000`
+2. ✅ **PASS** if: Dashboard loads without JavaScript errors in console
+3. ✅ **PASS** if: All existing dashboard items display properly
+
+#### Test 2: Escape Key Functionality  
+1. Click "Add Items" button to open modal
+2. Press **Escape** key
+3. ✅ **PASS** if: Add Items modal closes immediately
+4. Click dashboard title and select "Rename Dashboard"
+5. Press **Escape** key  
+6. ✅ **PASS** if: Rename modal closes immediately
+
+#### Test 3: Enter Key in Rename Modal
+1. Click dashboard title and select "Rename Dashboard"
+2. Type a new name in the text field
+3. Press **Enter** key
+4. ✅ **PASS** if: Dashboard is renamed and modal closes
+5. ✅ **PASS** if: Success toast appears
+
+#### Test 4: Modal Backdrop Clicks
+1. Click "Add Items" button to open modal
+2. Click outside the modal content (on dark background)
+3. ✅ **PASS** if: Modal closes immediately
+4. Click dashboard title and select "Rename Dashboard"  
+5. Click outside the modal content (on dark background)
+6. ✅ **PASS** if: Rename modal closes immediately
+
+#### Test 5: Drag and Drop Still Works
+1. Find progress blocks on dashboard
+2. Drag a progress block within the same company
+3. ✅ **PASS** if: Drag and drop reordering works normally
+4. Try dragging between different companies
+5. ✅ **PASS** if: Cross-company restriction works (shows warning toast)
+
+#### Test 6: Page Refresh & Event Handler Persistence
+1. Refresh the page (F5)
+2. Repeat Tests 2-4 (Escape key, Enter key, modal backdrop clicks)
+3. ✅ **PASS** if: All keyboard shortcuts and modal interactions still work after refresh
+
+### 🚨 CHECKPOINT RESULT:
+
+**❌ FAIL Criteria:**
+- Any JavaScript errors in browser console
+- Escape key doesn't close modals
+- Enter key doesn't save dashboard rename
+- Modal backdrop clicks don't close modals
+- Drag and drop functionality is broken
+- Any existing dashboard functionality is broken
+
+**✅ PASS Criteria:**
+- All 6 tests pass without issues
+- Dashboard functions exactly as before EventManager extraction
+- No JavaScript errors or regressions
+- Event handling works flawlessly
+
+### 📋 Checkpoint Completion:
+
+**✅ CHECKPOINT 2 PASSED - EventManager extraction successful**
+
+All 6 tests completed successfully:
+- ✅ Dashboard loads without errors
+- ✅ Escape key closes modals properly  
+- ✅ Enter key saves dashboard rename
+- ✅ Modal backdrop clicks work correctly
+- ✅ Drag and drop functionality preserved
+- ✅ Event handlers persist after page refresh
+
+**Result: Ready to proceed to Phase 3: UI Managers (RenderManager, ModalManager)**
 
 ---
 

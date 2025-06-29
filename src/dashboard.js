@@ -4,6 +4,7 @@
 import ArrowManager from './managers/arrow-manager.js';
 import TickerManager from './managers/ticker-manager.js';
 import CompanyColorManager from './managers/company-color-manager.js';
+import EventManager from './managers/event-manager.js';
 
 class Dashboard {
     constructor() {
@@ -40,6 +41,7 @@ class Dashboard {
         this.arrowManager = new ArrowManager(this);
         this.tickerManager = new TickerManager(this);
         this.companyColorManager = new CompanyColorManager(this);
+        this.eventManager = new EventManager(this);
     }
     
     /**
@@ -67,6 +69,7 @@ class Dashboard {
             this.arrowManager.init();
             this.tickerManager.init();
             this.companyColorManager.init();
+            this.eventManager.init();
             
             // Load initial data if we have items
             if (this.dashboardData.length > 0) {
@@ -237,50 +240,10 @@ class Dashboard {
      * Set up event listeners
      */
     setupEventListeners() {
-        // Store references to event handlers for cleanup
-        this.eventHandlers = {
-            modalClick: (e) => {
-                if (e.target.id === 'addItemModal') {
-                    this.hideAddItemModal();
-                }
-                if (e.target.id === 'dashboardRenameModal') {
-                    this.cancelDashboardRename();
-                }
-            },
-            escapeKey: (e) => {
-                if (e.key === 'Escape') {
-                    const renameModal = document.getElementById('dashboardRenameModal');
-                    if (renameModal && renameModal.classList.contains('show')) {
-                        this.cancelDashboardRename();
-                    } else {
-                        this.hideAddItemModal();
-                    }
-                }
-            },
-            enterKey: (e) => {
-                if (e.key === 'Enter') {
-                    const renameModal = document.getElementById('dashboardRenameModal');
-                    if (renameModal && renameModal.classList.contains('show')) {
-                        this.saveDashboardRename();
-                    }
-                }
-            }
-        };
+        // Delegate basic event listeners to EventManager
+        this.eventManager.setupBasicEventListeners();
         
-        // Modal backdrop click
-        document.getElementById('addItemModal').addEventListener('click', this.eventHandlers.modalClick);
-        
-        // Rename modal backdrop click
-        const renameModal = document.getElementById('dashboardRenameModal');
-        if (renameModal) {
-            renameModal.addEventListener('click', this.eventHandlers.modalClick);
-        }
-        
-        // Keyboard events
-        document.addEventListener('keydown', this.eventHandlers.escapeKey);
-        document.addEventListener('keydown', this.eventHandlers.enterKey);
-        
-        // Set up drag and drop event delegation
+        // Set up drag and drop event delegation (will be extracted in Phase 4)
         this.setupDragAndDrop();
     }
     
@@ -288,12 +251,10 @@ class Dashboard {
      * Clean up event listeners
      */
     cleanupEventListeners() {
-        if (this.eventHandlers) {
-            document.getElementById('addItemModal').removeEventListener('click', this.eventHandlers.modalClick);
-            document.removeEventListener('keydown', this.eventHandlers.escapeKey);
-        }
+        // Delegate basic event cleanup to EventManager
+        this.eventManager.cleanupBasicEventListeners();
         
-        // Clean up drag and drop listeners
+        // Clean up drag and drop listeners (will be extracted in Phase 4)
         this.cleanupDragAndDrop();
         
         // Clean up managers
