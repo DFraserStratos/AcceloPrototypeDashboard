@@ -2,12 +2,17 @@
  * RenderManager - Handles all dashboard rendering and layout functionality
  */
 export default class RenderManager {
+    /**
+     * Creates a new RenderManager instance
+     * @param {Dashboard} dashboard - Reference to the main Dashboard instance
+     */
     constructor(dashboard) {
         this.dashboard = dashboard; // Single source of truth
     }
     
     /**
      * Initialize the render manager
+     * Sets up global resizer functionality for column resizing
      */
     init() {
         // Initialize global resizer functionality for column resizing
@@ -16,6 +21,7 @@ export default class RenderManager {
     
     /**
      * Cleanup render manager resources
+     * No specific cleanup needed as global resizer uses persistent document listeners
      */
     cleanup() {
         // Cleanup any rendering-related event listeners if needed
@@ -24,6 +30,7 @@ export default class RenderManager {
     
     /**
      * Main dashboard rendering entry point
+     * Orchestrates the complete dashboard rendering process
      */
     renderDashboard() {
         // Clean up any existing arrow elements before rendering
@@ -38,6 +45,8 @@ export default class RenderManager {
     
     /**
      * Render company-grouped layout matching user's mockup
+     * Creates the main split layout with company blocks on the left and progress blocks on the right
+     * Handles empty state display when no items are present
      */
     renderCompanyGroupedLayout() {
         const contentGrid = document.querySelector('.content-grid');
@@ -196,6 +205,8 @@ export default class RenderManager {
     
     /**
      * Update company block heights to match their corresponding progress containers
+     * Ensures visual alignment between company blocks and their progress content
+     * Called after rendering to maintain layout consistency
      */
     updateCompanyBlockHeights() {
         const companyBlocks = document.querySelectorAll('.all-company-blocks-section .company-block');
@@ -215,6 +226,8 @@ export default class RenderManager {
 
     /**
      * Initialize the global resizer functionality that affects all split panes
+     * Sets up interactive column resizing between company blocks and progress blocks
+     * Saves user preferences to localStorage for persistence
      */
     initializeGlobalResizer() {
         let isResizing = false;
@@ -291,6 +304,12 @@ export default class RenderManager {
     
     /**
      * Create a compact progress block matching the user's mockup design
+     */
+    /**
+     * Create compact progress block for an individual item
+     * Generates the visual representation of projects and agreements with progress indicators
+     * @param {Object} item - The project or agreement item to render
+     * @returns {HTMLElement} The created progress block element
      */
     createCompactProgressBlock(item) {
         // Determine type and icon - improved logic
@@ -602,6 +621,12 @@ export default class RenderManager {
     /**
      * Create Accelo URL for a project or agreement
      */
+    /**
+     * Create Accelo URL for opening items in new tab
+     * @param {string|number} itemId - The ID of the item
+     * @param {string} type - The type of item ('project' or 'agreement')
+     * @returns {string} The complete Accelo URL
+     */
     createAcceloUrl(itemId, type) {
         if (!window.acceloAPI || !window.acceloAPI.deployment) {
             return '#';
@@ -699,6 +724,11 @@ export default class RenderManager {
 
     /**
      * Group dashboard items by company
+     */
+    /**
+     * Group items by company for rendering
+     * Organizes dashboard data into company-based groups for display
+     * @returns {Object} Object with company IDs as keys and company data as values
      */
     groupItemsByCompany() {
         const companies = {};

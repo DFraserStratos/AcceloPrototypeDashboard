@@ -1,8 +1,12 @@
 /**
  * EventManager handles basic event listeners for modals and keyboard shortcuts
- * Drag and drop events are handled separately in Phase 4
+ * Drag and drop events are handled separately in DragDropManager
  */
 export default class EventManager {
+    /**
+     * Creates a new EventManager instance
+     * @param {Dashboard} dashboard - Reference to the main Dashboard instance
+     */
     constructor(dashboard) {
         this.dashboard = dashboard;
         this.eventHandlers = new Map();
@@ -10,6 +14,7 @@ export default class EventManager {
     
     /**
      * Initialize event listeners
+     * Sets up all basic event handlers for modal interactions and keyboard shortcuts
      */
     init() {
         this.setupBasicEventListeners();
@@ -17,6 +22,7 @@ export default class EventManager {
     
     /**
      * Clean up event listeners
+     * Removes all event handlers and clears the handlers map
      */
     cleanup() {
         this.cleanupBasicEventListeners();
@@ -24,6 +30,8 @@ export default class EventManager {
     
     /**
      * Set up basic event listeners (modal clicks, keyboard shortcuts)
+     * Configures event handlers for modal backdrop clicks and keyboard navigation
+     * All handlers are stored in a Map for proper cleanup
      */
     setupBasicEventListeners() {
         // Create event handlers with references to dashboard
@@ -81,6 +89,7 @@ export default class EventManager {
     
     /**
      * Clean up basic event listeners
+     * Removes all event listeners and clears the handlers map to prevent memory leaks
      */
     cleanupBasicEventListeners() {
         const modalClickHandler = this.eventHandlers.get('modalClick');

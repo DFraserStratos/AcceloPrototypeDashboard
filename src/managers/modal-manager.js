@@ -3,14 +3,26 @@
  * Extracted from Dashboard class as part of systematic refactoring
  */
 export default class ModalManager {
+    /**
+     * Creates a new ModalManager instance
+     * @param {Dashboard} dashboard - Reference to the main Dashboard instance
+     */
     constructor(dashboard) {
         this.dashboard = dashboard;
     }
     
+    /**
+     * Initialize modal functionality
+     * Sets up any required modal initialization
+     */
     init() {
         // Initialize modal functionality if needed
     }
     
+    /**
+     * Cleanup modal resources
+     * Clears search timeouts and other modal-related resources
+     */
     cleanup() {
         // Clear any search timeouts
         if (this.dashboard.searchTimeout) {
@@ -25,6 +37,8 @@ export default class ModalManager {
 
     /**
      * Show add item modal
+     * Opens the modal for adding new items to the dashboard
+     * Initializes the two-step flow (company selection → item selection)
      */
     showAddItemModal() {
         const modal = document.getElementById('addItemModal');
@@ -48,6 +62,7 @@ export default class ModalManager {
 
     /**
      * Hide add item modal
+     * Closes the modal and resets all modal state
      */
     hideAddItemModal() {
         const modal = document.getElementById('addItemModal');
@@ -72,6 +87,8 @@ export default class ModalManager {
     
     /**
      * Update modal UI based on current step
+     * Handles the two-step modal flow: Step 1 (company selection) → Step 2 (item selection)
+     * Updates header, footer, and content based on current modal step
      */
     updateModalUI() {
         const modal = document.getElementById('addItemModal');
@@ -151,6 +168,8 @@ export default class ModalManager {
 
     /**
      * Handle search input (now company-only for step 1)
+     * Debounced search for companies using the Accelo API
+     * @param {string} query - The search query string
      */
     handleSearch(query) {
         if (this.dashboard.modalStep !== 1) return;
@@ -289,10 +308,13 @@ export default class ModalManager {
         });
     }
 
-    /**
+        /**
      * Proceed to item selection (step 2)
+     * Advances from company selection to project/agreement selection
+     * Fetches available items from the selected company
+     * @returns {Promise<void>}
      */
-    async proceedToItemSelection() {
+        async proceedToItemSelection() {
         if (this.dashboard.selectedCompanies.length === 0) {
             UIComponents.showToast('Please select at least one company', 'warning');
             return;
@@ -648,6 +670,12 @@ export default class ModalManager {
     /**
      * Add selected items to the dashboard
      */
+    /**
+     * Add selected items to the dashboard
+     * Fetches detailed data for each selected item and adds them to the dashboard
+     * Handles both projects and agreements with proper company association
+     * @returns {Promise<void>}
+     */
     async addSelectedItems() {
         if (this.dashboard.selectedItems.size === 0) {
             UIComponents.showToast('Please select at least one item', 'warning');
@@ -780,6 +808,11 @@ export default class ModalManager {
 
     /**
      * Show dashboard rename modal
+     */
+    /**
+     * Show dashboard rename modal
+     * Opens modal for renaming the current dashboard
+     * @param {string} currentName - The current dashboard name
      */
     showDashboardRenameModal(currentName) {
         const modal = document.getElementById('dashboardRenameModal');

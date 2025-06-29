@@ -2,6 +2,10 @@
  * ArrowManager - Handles empty state arrow functionality
  */
 export default class ArrowManager {
+    /**
+     * Creates a new ArrowManager instance
+     * @param {Dashboard} dashboard - Reference to the main Dashboard instance
+     */
     constructor(dashboard) {
         this.dashboard = dashboard;
         this.arrowResizeHandler = null;
@@ -11,6 +15,7 @@ export default class ArrowManager {
 
     /**
      * Initialize arrow functionality - called when manager is set up
+     * Arrow is initialized on-demand when empty state is shown
      */
     init() {
         // Arrow is initialized on-demand when empty state is shown
@@ -19,6 +24,7 @@ export default class ArrowManager {
 
     /**
      * Clean up arrow resources
+     * Removes event listeners and observers to prevent memory leaks
      */
     cleanup() {
         this.cleanupArrowElements();
@@ -59,6 +65,8 @@ export default class ArrowManager {
 
     /**
      * Update the arrow position dynamically
+     * Calculates optimal arrow positioning based on button location relative to content
+     * Handles both left-side and top-side arrow orientations automatically
      */
     updateArrowPosition() {
         const emptyStateContent = document.querySelector('.enhanced-empty-state .empty-state-content');
@@ -118,6 +126,12 @@ export default class ArrowManager {
 
     /**
      * Create a curved tapered arrow path that starts thin and gets thicker toward the head
+     * @param {number} startX - Starting X coordinate
+     * @param {number} startY - Starting Y coordinate  
+     * @param {number} endX - Ending X coordinate
+     * @param {number} endY - Ending Y coordinate
+     * @param {boolean} startFromTop - Whether arrow starts from top (true) or left (false)
+     * @returns {string} SVG path data string for the tapered arrow body
      */
     createCurvedTaperedArrowPath(startX, startY, endX, endY, startFromTop) {
         const startWidth = 2;  // Start thin at content area
@@ -203,6 +217,11 @@ export default class ArrowManager {
 
     /**
      * Create arrow head pointing toward the button (from content to button)
+     * @param {number} startX - Starting X coordinate
+     * @param {number} startY - Starting Y coordinate  
+     * @param {number} endX - Ending X coordinate
+     * @param {number} endY - Ending Y coordinate
+     * @returns {string} SVG path data string for the arrow head
      */
     createArrowHeadPointingToButton(startX, startY, endX, endY) {
         const bodyEndWidth = 12; // Match the thick end of the body
@@ -228,7 +247,8 @@ export default class ArrowManager {
     }
 
     /**
-     * Clean up arrow event listeners and observers
+     * Clean up arrow elements and event handlers
+     * Removes resize handlers, observers, and timeouts to prevent memory leaks
      */
     cleanupArrowElements() {
         if (this.arrowResizeHandler) {

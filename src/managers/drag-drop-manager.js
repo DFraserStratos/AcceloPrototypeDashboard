@@ -2,6 +2,10 @@
  * DragDropManager - Handles all drag and drop functionality
  */
 export default class DragDropManager {
+    /**
+     * Creates a new DragDropManager instance
+     * @param {Dashboard} dashboard - Reference to the main Dashboard instance
+     */
     constructor(dashboard) {
         this.dashboard = dashboard;
         
@@ -20,6 +24,7 @@ export default class DragDropManager {
     
     /**
      * Initialize drag and drop functionality
+     * Sets up event delegation for all drag and drop interactions
      */
     init() {
         this.setupDragAndDrop();
@@ -27,6 +32,7 @@ export default class DragDropManager {
     
     /**
      * Clean up drag and drop functionality
+     * Removes all event listeners to prevent memory leaks
      */
     cleanup() {
         this.cleanupDragAndDrop();
@@ -34,6 +40,8 @@ export default class DragDropManager {
     
     /**
      * Set up drag and drop functionality
+     * Uses event delegation on the main content area for optimal performance
+     * Handles both progress block and company block dragging
      */
     setupDragAndDrop() {
         // Use event delegation on the main content area
@@ -50,6 +58,7 @@ export default class DragDropManager {
     
     /**
      * Clean up drag and drop event listeners
+     * Removes all event listeners from the main content area
      */
     cleanupDragAndDrop() {
         const mainContent = document.getElementById('mainContent');
@@ -65,6 +74,8 @@ export default class DragDropManager {
     
     /**
      * Handle drag start event
+     * Determines if a progress block or company block is being dragged
+     * @param {DragEvent} e - The drag start event
      */
     handleDragStart(e) {
         const progressBlock = e.target.closest('.compact-progress-block');
@@ -81,6 +92,9 @@ export default class DragDropManager {
     
     /**
      * Start dragging a progress block
+     * Sets up drag state and visual feedback for progress block dragging
+     * @param {DragEvent} e - The drag start event
+     * @param {HTMLElement} progressBlock - The progress block element being dragged
      */
     startProgressBlockDrag(e, progressBlock) {
         this.dragState.isDragging = true;
@@ -130,7 +144,10 @@ export default class DragDropManager {
     }
     
     /**
-     * Start dragging a company block
+     * Start dragging a company block  
+     * Sets up drag state and visual feedback for company block dragging
+     * @param {DragEvent} e - The drag start event
+     * @param {HTMLElement} companyBlock - The company block element being dragged
      */
     startCompanyBlockDrag(e, companyBlock) {
         this.dragState.isDragging = true;
@@ -159,6 +176,9 @@ export default class DragDropManager {
     
     /**
      * Create a custom drag preview
+     * Creates a visual representation of the dragged element
+     * @param {DragEvent} e - The drag start event
+     * @param {HTMLElement} element - The element being dragged
      */
     createDragPreview(e, element) {
         // Clone the element for the drag image
@@ -180,6 +200,8 @@ export default class DragDropManager {
     
     /**
      * Highlight valid drop zones
+     * Shows visual feedback for where items can be dropped
+     * @param {string} dragType - Type of drag operation ('progress' or 'company')
      */
     highlightDropZones(dragType) {
         if (dragType === 'progress') {
@@ -284,6 +306,8 @@ export default class DragDropManager {
     
     /**
      * Get or create insertion marker
+     * Creates or retrieves the visual marker used to show drop position
+     * @returns {HTMLElement} The insertion marker element
      */
     getOrCreateInsertMarker() {
         let marker = document.getElementById('drag-insert-marker');
@@ -297,6 +321,11 @@ export default class DragDropManager {
     
     /**
      * Get the element after which to insert
+     * Finds the optimal insertion point based on mouse Y position
+     * @param {HTMLElement} container - The container to search within
+     * @param {number} y - The Y coordinate of the mouse
+     * @param {string} selector - CSS selector for draggable elements
+     * @returns {HTMLElement|null} The element after which to insert, or null for beginning
      */
     getDragAfterElement(container, y, selector = '.compact-progress-block') {
         const draggableElements = [...container.querySelectorAll(`${selector}:not(.dragging)`)];
@@ -315,6 +344,8 @@ export default class DragDropManager {
     
     /**
      * Handle drag enter event
+     * Provides visual feedback when entering valid drop zones
+     * @param {DragEvent} e - The drag enter event
      */
     handleDragEnter(e) {
         if (!this.dragState.isDragging) return;
@@ -329,6 +360,8 @@ export default class DragDropManager {
     
     /**
      * Handle drag leave event
+     * Removes visual feedback when leaving drop zones
+     * @param {DragEvent} e - The drag leave event
      */
     handleDragLeave(e) {
         if (!this.dragState.isDragging) return;
@@ -343,6 +376,8 @@ export default class DragDropManager {
     
     /**
      * Handle drop event
+     * Processes the drop and delegates to appropriate handler
+     * @param {DragEvent} e - The drop event
      */
     handleDrop(e) {
         if (!this.dragState.isDragging) {
@@ -364,6 +399,8 @@ export default class DragDropManager {
     
     /**
      * Handle progress block drop
+     * Handles dropping of progress blocks within the same company
+     * @param {DragEvent} e - The drop event
      */
     handleProgressBlockDrop(e) {
         const container = e.target.closest('.progress-blocks-container');
@@ -403,6 +440,8 @@ export default class DragDropManager {
     
     /**
      * Handle company block drop
+     * Handles dropping of company blocks to reorder companies
+     * @param {DragEvent} e - The drop event
      */
     handleCompanyBlockDrop(e) {
         const container = e.target.closest('.all-company-blocks-section');
@@ -423,6 +462,11 @@ export default class DragDropManager {
     
     /**
      * Move a progress block to a new company/position
+     * Updates dashboard data to reflect new position of progress block
+     * Enforces business rule that progress blocks cannot move between companies
+     * @param {Object} item - The item being moved
+     * @param {number} targetCompanyId - The target company ID
+     * @param {HTMLElement|null} afterElement - Element to insert after, or null for beginning
      */
     moveProgressBlock(item, targetCompanyId, afterElement) {
         // Check if item exists
@@ -520,6 +564,9 @@ export default class DragDropManager {
     
     /**
      * Reorder companies
+     * Updates company order and reorders dashboard data accordingly
+     * @param {number} companyId - The ID of the company being moved
+     * @param {HTMLElement|null} afterElement - Element to insert after, or null for beginning
      */
     reorderCompanies(companyId, afterElement) {
         // Use the saved company order, not the order from groupItemsByCompany
@@ -588,6 +635,8 @@ export default class DragDropManager {
     
     /**
      * Handle drag end event
+     * Cleans up drag state when drag operation ends
+     * @param {DragEvent} e - The drag end event
      */
     handleDragEnd(e) {
         this.cleanupDragState();
@@ -595,6 +644,8 @@ export default class DragDropManager {
     
     /**
      * Clean up drag state
+     * Removes all visual indicators and resets drag state object
+     * Called after successful drop or cancelled drag operation
      */
     cleanupDragState() {
         // Remove dragging classes

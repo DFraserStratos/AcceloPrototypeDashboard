@@ -2,21 +2,36 @@
  * DataManager handles data persistence, routing, and dashboard state management
  */
 export default class DataManager {
+    /**
+     * Creates a new DataManager instance
+     * @param {Dashboard} dashboard - Reference to the main Dashboard instance
+     */
     constructor(dashboard) {
         this.dashboard = dashboard;
     }
     
+    /**
+     * Initialize data-related functionality
+     * Most initialization is handled by specific method calls from Dashboard.init()
+     */
     init() {
         // Initialize data-related functionality
         // Most initialization is handled by specific method calls from Dashboard.init()
     }
     
+    /**
+     * Cleanup resources
+     * No event listeners or timers to clean up for DataManager
+     */
     cleanup() {
         // Cleanup resources - no event listeners or timers to clean up
     }
     
     /**
      * Handle routing for dashboard selection
+     * Processes URL parameters to determine which dashboard to load
+     * and handles dashboard rename functionality if requested
+     * @returns {Promise<void>}
      */
     async handleRouting() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -62,6 +77,8 @@ export default class DataManager {
 
     /**
      * Update dashboard name badge in navbar
+     * Shows or hides the dashboard name badge based on whether a name is provided
+     * @param {string} dashboardName - The name to display in the navbar badge
      */
     updateDashboardNameBadge(dashboardName) {
         const context = document.getElementById('navbarDashboardContext');
@@ -78,7 +95,9 @@ export default class DataManager {
     }
     
     /**
-     * Load saved dashboard state
+     * Load saved dashboard state from localStorage
+     * Restores dashboard data, company order, and company colors from persistent storage
+     * @returns {Promise<void>}
      */
     async loadDashboardState() {
         if (!this.dashboard.currentDashboardId) {
@@ -99,7 +118,8 @@ export default class DataManager {
     }
     
     /**
-     * Save dashboard state
+     * Save dashboard state to localStorage
+     * Persists current dashboard data, company order, and company colors
      */
     saveDashboardState() {
         if (!this.dashboard.currentDashboardId) {
@@ -118,6 +138,9 @@ export default class DataManager {
     
     /**
      * Refresh all dashboard data from API
+     * Re-fetches hours/usage data for all dashboard items from the Accelo API
+     * and updates the display with the latest information
+     * @returns {Promise<void>}
      */
     async refreshDashboardData() {
         if (this.dashboard.dashboardData.length === 0) {

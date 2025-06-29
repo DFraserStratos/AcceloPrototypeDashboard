@@ -5,6 +5,10 @@
  * time and value amounts for items that have exceeded their budgets.
  */
 export default class TickerManager {
+    /**
+     * Creates a new TickerManager instance
+     * @param {Dashboard} dashboard - Reference to the main Dashboard instance
+     */
     constructor(dashboard) {
         this.dashboard = dashboard;
         this.overBudgetTickerInterval = null;
@@ -12,6 +16,7 @@ export default class TickerManager {
     
     /**
      * Initialize ticker manager
+     * Starts the ticker intervals for over-budget items
      * This is called during dashboard initialization
      */
     init() {
@@ -21,6 +26,7 @@ export default class TickerManager {
     
     /**
      * Cleanup ticker resources
+     * Stops all ticker intervals and clears timers
      * This is called during dashboard cleanup
      */
     cleanup() {
@@ -29,6 +35,7 @@ export default class TickerManager {
     
     /**
      * Start ticking timers for over budget items
+     * Updates over-budget displays every second to show real-time increases
      */
     start() {
         // Clear any existing ticker
@@ -42,6 +49,7 @@ export default class TickerManager {
     
     /**
      * Stop over budget tickers
+     * Clears the ticker interval and resets the timer reference
      */
     stop() {
         if (this.overBudgetTickerInterval) {
@@ -51,7 +59,9 @@ export default class TickerManager {
     }
     
     /**
-     * Update all over budget time displays
+     * Update all over budget time and value displays
+     * Calculates elapsed time since dashboard load and updates ticker displays
+     * to show continuously increasing over-budget amounts
      */
     update() {
         // Handle time budget over budget tickers
