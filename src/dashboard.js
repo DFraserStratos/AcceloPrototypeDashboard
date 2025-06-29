@@ -6,6 +6,7 @@ import TickerManager from './managers/ticker-manager.js';
 import CompanyColorManager from './managers/company-color-manager.js';
 import EventManager from './managers/event-manager.js';
 import RenderManager from './managers/render-manager.js';
+import ModalManager from './managers/modal-manager.js';
 
 class Dashboard {
     constructor() {
@@ -44,6 +45,7 @@ class Dashboard {
         this.companyColorManager = new CompanyColorManager(this);
         this.eventManager = new EventManager(this);
         this.renderManager = new RenderManager(this);
+        this.modalManager = new ModalManager(this);
     }
     
     /**
@@ -73,6 +75,7 @@ class Dashboard {
             this.companyColorManager.init();
             this.eventManager.init();
             this.renderManager.init();
+            this.modalManager.init();
             
             // Load initial data if we have items
             if (this.dashboardData.length > 0) {
@@ -167,76 +170,28 @@ class Dashboard {
      * Show dashboard rename modal
      */
     showDashboardRenameModal(currentName) {
-        const modal = document.getElementById('dashboardRenameModal');
-        const input = document.getElementById('newDashboardName');
-        
-        if (modal && input) {
-            input.value = currentName;
-            modal.classList.add('show');
-            
-            // Focus and select text after modal appears
-            setTimeout(() => {
-                input.focus();
-                input.select();
-            }, 100);
-        }
+        return this.modalManager.showDashboardRenameModal(currentName);
     }
 
     /**
      * Save dashboard rename
      */
     saveDashboardRename() {
-        const input = document.getElementById('newDashboardName');
-        const newName = input.value.trim();
-        
-        if (!newName) {
-            UIComponents.showToast('Please enter a dashboard name', 'error');
-            return;
-        }
-
-        try {
-            // Rename the dashboard
-            window.dashboardManager.renameDashboard(this.currentDashboardId, newName);
-            
-            // Update the navbar badge
-            this.updateDashboardNameBadge(newName);
-            
-            // Hide the modal
-            this.hideDashboardRenameModal();
-            
-            // Clear URL parameters
-            const url = new URL(window.location);
-            url.searchParams.delete('rename');
-            window.history.replaceState({}, document.title, url.toString());
-            
-            UIComponents.showToast('Dashboard renamed successfully', 'success');
-            
-        } catch (error) {
-            console.error('Failed to rename dashboard:', error);
-            UIComponents.showToast('Failed to rename dashboard: ' + error.message, 'error');
-        }
+        return this.modalManager.saveDashboardRename();
     }
 
     /**
      * Cancel dashboard rename
      */
     cancelDashboardRename() {
-        this.hideDashboardRenameModal();
-        
-        // Clear URL parameters
-        const url = new URL(window.location);
-        url.searchParams.delete('rename');
-        window.history.replaceState({}, document.title, url.toString());
+        return this.modalManager.cancelDashboardRename();
     }
 
     /**
      * Hide dashboard rename modal
      */
     hideDashboardRenameModal() {
-        const modal = document.getElementById('dashboardRenameModal');
-        if (modal) {
-            modal.classList.remove('show');
-        }
+        return this.modalManager.hideDashboardRenameModal();
     }
     
     /**
@@ -959,300 +914,74 @@ class Dashboard {
      * Show add item modal
      */
     showAddItemModal() {
-        const modal = document.getElementById('addItemModal');
-        modal.classList.add('show');
-        
-        // Reset modal state
-        this.modalStep = 1;
-        this.selectedCompanies = [];
-        this.availableItems = [];
-        this.selectedItems.clear();
-        
-        // Focus search input
-        setTimeout(() => {
-            document.getElementById('searchInput').focus();
-        }, 100);
-        
-        // Clear previous search and update UI
-        document.getElementById('searchInput').value = '';
-        this.updateModalUI();
+        return this.modalManager.showAddItemModal();
     }
     
     /**
      * Update modal UI based on current step
      */
     updateModalUI() {
-        const modal = document.getElementById('addItemModal');
-        const modalContent = modal.querySelector('.modal');
-        const searchInput = document.getElementById('searchInput');
-        const searchResults = document.getElementById('searchResults');
-        const modalFooter = modal.querySelector('.modal-footer');
-        
-        // Add close button if it doesn't exist
-        let closeBtn = modalContent.querySelector('.modal-close-btn');
-        if (!closeBtn) {
-            closeBtn = document.createElement('button');
-            closeBtn.className = 'modal-close-btn';
-            closeBtn.innerHTML = '<i class="fa-solid fa-times"></i>';
-            closeBtn.onclick = () => this.hideAddItemModal();
-            modalContent.appendChild(closeBtn);
-        }
-        
-        if (this.modalStep === 1) {
-            // Step 1: Select companies
-            const modalHeader = modalContent.querySelector('.modal-header');
-            modalHeader.innerHTML = `
-                <h2>Select Company</h2>
-            `;
-            searchInput.placeholder = 'Search for companies...';
-            searchInput.style.display = 'block';
-            
-            modalFooter.innerHTML = `
-                <div class="modal-footer-left">
-                    <div class="modal-help-text">
-                        <i class="fa-solid fa-lightbulb"></i>
-                        Click on a company to continue
-                    </div>
-                </div>
-                <div class="modal-footer-right">
-                    <button class="btn btn-ghost" onclick="dashboard.hideAddItemModal()">Cancel</button>
-                </div>
-            `;
-            
-            this.renderCompanySearchResults(null);
-            
-        } else {
-            // Step 2: Select projects/agreements
-            const modalHeader = modalContent.querySelector('.modal-header');
-            modalHeader.innerHTML = `
-                <h2>Select Projects & Agreements</h2>
-                <div class="selected-company-badge">
-                    <i class="fa-solid fa-building"></i>
-                    ${UIComponents.escapeHtml(this.selectedCompanies[0].name)}
-                </div>
-            `;
-            searchInput.style.display = 'none'; // Hide search in step 2
-            
-            const selectedCount = this.selectedItems.size;
-            modalFooter.innerHTML = `
-                <div class="modal-footer-left">
-                    <div class="selection-counter">
-                        <i class="fa-solid fa-check-circle"></i>
-                        <span class="counter-text">${selectedCount} item${selectedCount !== 1 ? 's' : ''} selected</span>
-                    </div>
-                </div>
-                <div class="modal-footer-right">
-                    <button class="btn btn-ghost" onclick="dashboard.backToCompanySelection()">
-                        <i class="fa-solid fa-arrow-left"></i>
-                        Back
-                    </button>
-                    <button class="btn btn-primary" onclick="dashboard.addSelectedItems()" ${selectedCount === 0 ? 'disabled' : ''}>
-                        <i class="fa-solid fa-plus"></i>
-                        Add Selected Items
-                    </button>
-                </div>
-            `;
-            
-            this.renderItemSelectionUI();
-        }
+        return this.modalManager.updateModalUI();
     }
     
     /**
      * Handle search input (now company-only for step 1)
      */
     handleSearch(query) {
-        if (this.modalStep !== 1) return;
-        
-        // Clear previous timeout
-        if (this.searchTimeout) {
-            clearTimeout(this.searchTimeout);
-        }
-        
-        // Debounce search
-        this.searchTimeout = setTimeout(async () => {
-            if (query.trim().length < 2) {
-                this.renderCompanySearchResults(null);
-                return;
-            }
-            
-            try {
-                // Show loading state - properly centered
-                document.getElementById('searchResults').innerHTML = `
-                    <div class="search-loading">
-                        <div class="spinner"></div>
-                        <p class="search-loading-text">Searching companies...</p>
-                    </div>
-                `;
-                
-                // Search companies only
-                const companies = await window.acceloAPI.searchCompanies(query);
-                this.renderCompanySearchResults(companies);
-                
-            } catch (error) {
-                console.error('Search failed:', error);
-                document.getElementById('searchResults').innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                        <div class="empty-state-title">Search Failed</div>
-                        <div class="empty-state-description">
-                            ${UIComponents.escapeHtml(error.message)}
-                        </div>
-                    </div>
-                `;
-            }
-        }, 300);
+        return this.modalManager.handleSearch(query);
     }
     
     /**
      * Render company search results for step 1
      */
     renderCompanySearchResults(companies) {
-        const container = document.getElementById('searchResults');
-        
-        if (!companies) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
-                    <div class="empty-state-title">Search for Companies</div>
-                    <div class="empty-state-description">
-                        Type at least 2 characters to search for companies in your Accelo account.
-                    </div>
-                </div>
-            `;
-            return;
-        }
-        
-        if (companies.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon"><i class="fa-solid fa-circle-question"></i></div>
-                    <div class="empty-state-title">No Companies Found</div>
-                    <div class="empty-state-description">
-                        Try a different search term or check your spelling.
-                    </div>
-                </div>
-            `;
-            return;
-        }
-        
-        // Add results header
-        container.innerHTML = `
-            <div class="search-results-header">
-                <span class="results-count">${companies.length} company${companies.length !== 1 ? 'ies' : ''} found</span>
-            </div>
-            <div class="search-results-list"></div>
-        `;
-        
-        const resultsList = container.querySelector('.search-results-list');
-        
-        companies.forEach(company => {
-            const item = document.createElement('div');
-            item.className = 'company-search-result';
-            
-            // Get company initials for icon
-            const initials = company.name
-                .split(' ')
-                .map(word => word[0])
-                .join('')
-                .substring(0, 2)
-                .toUpperCase();
-            
-            item.innerHTML = `
-                <div class="company-result-content">
-                    <div class="company-result-icon">
-                        <span class="company-initials">${initials}</span>
-                    </div>
-                    <div class="company-result-info">
-                        <div class="company-result-name">${UIComponents.escapeHtml(company.name)}</div>
-                        <div class="company-result-type">Company</div>
-                    </div>
-                    <div class="company-result-action">
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </div>
-                </div>
-            `;
-            
-            // Add click handler to immediately proceed to step 2
-            item.addEventListener('click', async () => {
-                // Set this company as selected
-                this.selectedCompanies = [company];
-                
-                // Immediately proceed to item selection
-                await this.proceedToItemSelection();
-            });
-            
-            // Add keyboard navigation
-            item.setAttribute('tabindex', '0');
-            item.setAttribute('role', 'button');
-            item.setAttribute('aria-label', `Select ${company.name}`);
-            
-            item.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    item.click();
-                }
-            });
-            
-            resultsList.appendChild(item);
-        });
+        return this.modalManager.renderCompanySearchResults(companies);
     }
     
     /**
      * Proceed to item selection (step 2)
      */
-    async proceedToItemSelection() {
-        if (this.selectedCompanies.length === 0) {
-            UIComponents.showToast('Please select at least one company', 'warning');
-            return;
-        }
-        
-        try {
-            // Show loading state in the search results area
-            document.getElementById('searchResults').innerHTML = `
-                <div class="search-loading">
-                    <div class="spinner"></div>
-                    <p class="search-loading-text">Loading projects and agreements...</p>
-                </div>
-            `;
-            
-            // Get projects and agreements for selected companies
-            const companyIds = this.selectedCompanies.map(c => c.id);
-            this.availableItems = await window.acceloAPI.getProjectsAndAgreements(companyIds);
-            
-            // Move to step 2
-            this.modalStep = 2;
-            this.updateModalUI();
-            
-        } catch (error) {
-            console.error('Failed to load items:', error);
-            // Show error state in the search results area
-            document.getElementById('searchResults').innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                    <div class="empty-state-title">Failed to Load Items</div>
-                    <div class="empty-state-description">
-                        ${UIComponents.escapeHtml(error.message)}
-                    </div>
-                </div>
-            `;
-            UIComponents.showToast('Failed to load items: ' + error.message, 'error');
-        }
+        async proceedToItemSelection() {
+        return this.modalManager.proceedToItemSelection();
     }
-    
+
     /**
      * Back to company selection (step 1)
      */
     backToCompanySelection() {
-        this.modalStep = 1;
-        this.selectedItems.clear();
-        document.getElementById('searchInput').style.display = 'block';
-        this.updateModalUI();
+        return this.modalManager.backToCompanySelection();
     }
     
     /**
      * Render item selection UI for step 2
      */
     renderItemSelectionUI() {
+        return this.modalManager.renderItemSelectionUI();
+    }
+
+    /**
+     * Create selectable item for step 2
+     */
+    createSelectableItem(item, type) {
+        return this.modalManager.createSelectableItem(item, type);
+    }
+
+    /**
+     * Update selection counter in modal footer
+     */
+    updateSelectionCounter() {
+        return this.modalManager.updateSelectionCounter();
+    }
+
+    /**
+     * Add selected items to the dashboard
+     */
+    async addSelectedItems() {
+        return this.modalManager.addSelectedItems();
+    }
+
+    // TODO: The methods below need to be cleaned up after testing
+    _originalRenderItemSelectionUI() {
         const container = document.getElementById('searchResults');
         
         if (this.availableItems.length === 0) {
@@ -1503,78 +1232,29 @@ class Dashboard {
     /**
      * Select all available items
      */
-    selectAllItems() {
-        // Clear current selection
-        this.selectedItems.clear();
-        
-        // Add all items
-        this.availableItems.forEach(companyData => {
-            companyData.projects.forEach(project => {
-                this.selectedItems.add(`project-${project.id}`);
-            });
-            companyData.agreements.forEach(agreement => {
-                this.selectedItems.add(`agreement-${agreement.id}`);
-            });
-        });
-        
-        // Update UI
-        this.updateSelectionUI();
-        this.updateSelectionCounter();
+        selectAllItems() {
+        return this.modalManager.selectAllItems();
     }
-    
+
     /**
      * Clear all selected items 
      */
     clearAllItems() {
-        this.selectedItems.clear();
-        this.updateSelectionUI();
-        this.updateSelectionCounter();
+        return this.modalManager.clearAllItems();
     }
-    
+
     /**
      * Update selection UI for all items
      */
     updateSelectionUI() {
-        document.querySelectorAll('.selectable-item').forEach(item => {
-            const type = item.dataset.type;
-            const id = item.dataset.id;
-            const itemKey = `${type}-${id}`;
-            const checkbox = item.querySelector('input[type="checkbox"]');
-            
-            if (this.selectedItems.has(itemKey)) {
-                item.classList.add('selected');
-                checkbox.checked = true;
-                item.setAttribute('aria-checked', 'true');
-            } else {
-                item.classList.remove('selected');
-                checkbox.checked = false;
-                item.setAttribute('aria-checked', 'false');
-            }
-        });
+        return this.modalManager.updateSelectionUI();
     }
-    
+
     /**
      * Hide add item modal
      */
     hideAddItemModal() {
-        const modal = document.getElementById('addItemModal');
-        modal.classList.remove('show');
-        
-        // Reset modal state
-        this.modalStep = 1;
-        this.selectedCompanies = [];
-        this.availableItems = [];
-        this.selectedItems.clear();
-        
-        // Clear search timeout
-        if (this.searchTimeout) {
-            clearTimeout(this.searchTimeout);
-            this.searchTimeout = null;
-        }
-        
-        // Clear search results and reset UI
-        document.getElementById('searchInput').value = '';
-        document.getElementById('searchInput').style.display = 'block';
+        return this.modalManager.hideAddItemModal();
     }
     
     /**
