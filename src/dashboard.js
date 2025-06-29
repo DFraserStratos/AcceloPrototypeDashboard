@@ -7,6 +7,7 @@ import CompanyColorManager from './managers/company-color-manager.js';
 import EventManager from './managers/event-manager.js';
 import RenderManager from './managers/render-manager.js';
 import ModalManager from './managers/modal-manager.js';
+import DataManager from './managers/data-manager.js';
 
 class Dashboard {
     constructor() {
@@ -46,6 +47,7 @@ class Dashboard {
         this.eventManager = new EventManager(this);
         this.renderManager = new RenderManager(this);
         this.modalManager = new ModalManager(this);
+        this.dataManager = new DataManager(this);
     }
     
     /**
@@ -61,10 +63,10 @@ class Dashboard {
             await window.dashboardManager.init();
             
             // Handle routing and dashboard selection
-            await this.handleRouting();
+            await this.dataManager.handleRouting();
             
             // Load saved dashboard state
-            await this.loadDashboardState();
+            await this.dataManager.loadDashboardState();
             
             // Set up event listeners
             this.setupEventListeners();
@@ -76,6 +78,7 @@ class Dashboard {
             this.eventManager.init();
             this.renderManager.init();
             this.modalManager.init();
+            this.dataManager.init();
             
             // Load initial data if we have items
             if (this.dashboardData.length > 0) {
@@ -104,67 +107,7 @@ class Dashboard {
         }
     }
 
-    /**
-     * Handle routing for dashboard selection
-     */
-    async handleRouting() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const dashboardIdParam = urlParams.get('dashboard');
-        const shouldRename = urlParams.get('rename') === 'true';
-        
-        if (dashboardIdParam) {
-            // Validate dashboard exists
-            const dashboard = window.dashboardManager.getDashboard(dashboardIdParam);
-            if (dashboard) {
-                this.currentDashboardId = dashboardIdParam;
-                window.dashboardManager.setCurrentDashboard(dashboardIdParam);
-                window.dashboardManager.updateDashboardAccess(dashboardIdParam);
-                this.updateDashboardNameBadge(dashboard.name);
-                
-                // If rename flag is set, show rename modal after a brief delay
-                if (shouldRename) {
-                    setTimeout(() => {
-                        this.showDashboardRenameModal(dashboard.name);
-                    }, 500);
-                }
-            } else {
-                // Dashboard doesn't exist, redirect to dashboards page
-                window.location.href = '/dashboards.html';
-                return;
-            }
-        } else {
-            // No dashboard specified, check if we have a current dashboard
-            const currentDashboardId = window.dashboardManager.getCurrentDashboardId();
-            if (currentDashboardId) {
-                this.currentDashboardId = currentDashboardId;
-                const dashboard = window.dashboardManager.getDashboard(currentDashboardId);
-                if (dashboard) {
-                    this.updateDashboardNameBadge(dashboard.name);
-                }
-            } else {
-                // No current dashboard, redirect to dashboards page
-                window.location.href = '/dashboards.html';
-                return;
-            }
-        }
-    }
 
-    /**
-     * Update dashboard name badge in navbar
-     */
-    updateDashboardNameBadge(dashboardName) {
-        const context = document.getElementById('navbarDashboardContext');
-        const nameElement = document.getElementById('navbarDashboardName');
-        
-        if (context && nameElement) {
-            if (dashboardName && dashboardName.trim()) {
-                nameElement.textContent = dashboardName;
-                context.style.display = 'flex';
-            } else {
-                context.style.display = 'none';
-            }
-        }
-    }
 
     /**
      * Show dashboard rename modal
@@ -192,6 +135,20 @@ class Dashboard {
      */
     hideDashboardRenameModal() {
         return this.modalManager.hideDashboardRenameModal();
+    }
+
+    /**
+     * Refresh dashboard data - delegates to DataManager
+     */
+    refreshDashboardData() {
+        return this.dataManager.refreshDashboardData();
+    }
+
+    /**
+     * Update dashboard name badge - delegates to DataManager
+     */
+    updateDashboardNameBadge(dashboardName) {
+        return this.dataManager.updateDashboardNameBadge(dashboardName);
     }
     
     /**
@@ -696,7 +653,7 @@ class Dashboard {
         }
         
         // Save and re-render
-        this.saveDashboardState();
+        this.dataManager.saveDashboardState();
         
         // Add reordering class to prevent height animations
         document.body.classList.add('is-reordering');
@@ -764,7 +721,7 @@ class Dashboard {
         this.companyOrder = companyIds;
         
         // Save and re-render
-        this.saveDashboardState();
+        this.dataManager.saveDashboardState();
         
         // Add reordering class to prevent height animations
         document.body.classList.add('is-reordering');
@@ -816,99 +773,7 @@ class Dashboard {
         };
     }
     
-    /**
-     * Load saved dashboard state
-     */
-    async loadDashboardState() {
-        if (!this.currentDashboardId) {
-            console.error('No current dashboard ID set');
-            return;
-        }
-        
-        const dashboardData = window.dashboardManager.loadDashboardData(this.currentDashboardId);
-        this.dashboardData = dashboardData.dashboardData || [];
-        this.companyOrder = dashboardData.companyOrder || [];
-        this.companyColors = dashboardData.companyColors || {};
-        
-        // If no company order saved, derive it from dashboardData
-        if (this.companyOrder.length === 0 && this.dashboardData.length > 0) {
-            const companies = this.groupItemsByCompany();
-            this.companyOrder = Object.keys(companies);
-        }
-    }
-    
-    /**
-     * Save dashboard state
-     */
-    saveDashboardState() {
-        if (!this.currentDashboardId) {
-            console.error('No current dashboard ID set');
-            return;
-        }
-        
-        const state = {
-            dashboardData: this.dashboardData,
-            companyOrder: this.companyOrder,
-            companyColors: this.companyColors
-        };
-        
-        window.dashboardManager.saveDashboardData(this.currentDashboardId, state);
-    }
-    
-    /**
-     * Refresh all dashboard data from API
-     */
-    async refreshDashboardData() {
-        if (this.dashboardData.length === 0) {
-            this.renderDashboard();
-            return;
-        }
 
-        try {
-            UIComponents.showLoading();
-            
-            // Refresh data for each item
-            for (let i = 0; i < this.dashboardData.length; i++) {
-                const item = this.dashboardData[i];
-                
-                if (item.type === 'project') {
-                    try {
-                        const hours = await window.acceloAPI.getProjectHours(item.id);
-                        this.dashboardData[i].hours = hours;
-                    } catch (error) {
-                        console.error(`Failed to refresh hours for project ${item.id}:`, error);
-                    }
-                } else if (item.type === 'agreement') {
-                    try {
-                        const usage = await window.acceloAPI.getAgreementUsage(item.id);
-                        this.dashboardData[i].usage = usage;
-                    } catch (error) {
-                        console.error(`Failed to refresh usage for agreement ${item.id}:`, error);
-                    }
-                }
-                
-                // Small delay to avoid rate limiting
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            
-            // Save the refreshed data and re-render
-            this.saveDashboardState();
-            this.renderDashboard();
-            
-            // Reapply saved company colors after rendering
-            setTimeout(() => {
-                this.applySavedCompanyColors();
-            }, 50);
-            
-            UIComponents.showToast('Dashboard data refreshed successfully', 'success');
-            
-        } catch (error) {
-            console.error('Failed to refresh dashboard data:', error);
-            UIComponents.showToast('Failed to refresh data: ' + error.message, 'error');
-        } finally {
-            UIComponents.hideLoading();
-        }
-    }
     
     /**
      * Show add item modal
@@ -1363,7 +1228,7 @@ class Dashboard {
             }
             
             // Save state
-            this.saveDashboardState();
+            this.dataManager.saveDashboardState();
             
             // Re-render dashboard
             this.renderDashboard();
@@ -1414,7 +1279,7 @@ class Dashboard {
             this.dashboardData = this.dashboardData.filter(item => !(item.type === type && item.id == itemId));
             
             // Save state and refresh UI
-            this.saveDashboardState();
+            this.dataManager.saveDashboardState();
             this.renderDashboard();
             
             // Reapply saved company colors after rendering

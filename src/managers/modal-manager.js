@@ -751,7 +751,7 @@ export default class ModalManager {
             }
             
             // Save state
-            this.dashboard.saveDashboardState();
+            this.dashboard.dataManager.saveDashboardState();
             
             // Re-render dashboard
             this.dashboard.renderDashboard();

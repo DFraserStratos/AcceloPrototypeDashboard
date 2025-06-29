@@ -85,7 +85,7 @@ export default class CompanyColorManager {
             name: colorName
         };
         
-        this.dashboard.saveDashboardState();
+        this.dashboard.dataManager.saveDashboardState();
     }
 
     /**
@@ -94,7 +94,7 @@ export default class CompanyColorManager {
     removeCompanyColor(companyId) {
         if (this.dashboard.companyColors && this.dashboard.companyColors[companyId]) {
             delete this.dashboard.companyColors[companyId];
-            this.dashboard.saveDashboardState();
+            this.dashboard.dataManager.saveDashboardState();
         }
         
         // Reset to default styling - use applyCompanyColor with null values
