@@ -2,6 +2,7 @@
  * Dashboard main functionality
  */
 import ArrowManager from './managers/arrow-manager.js';
+import TickerManager from './managers/ticker-manager.js';
 
 class Dashboard {
     constructor() {
@@ -36,6 +37,7 @@ class Dashboard {
         
         // Initialize managers
         this.arrowManager = new ArrowManager(this);
+        this.tickerManager = new TickerManager(this);
     }
     
     /**
@@ -61,6 +63,7 @@ class Dashboard {
             
             // Initialize managers
             this.arrowManager.init();
+            this.tickerManager.init();
             
             // Load initial data if we have items
             if (this.dashboardData.length > 0) {
@@ -73,9 +76,6 @@ class Dashboard {
             setTimeout(() => {
                 this.applySavedCompanyColors();
             }, 100);
-            
-            // Initialize over budget tickers
-            this.startOverBudgetTickers();
             
         } catch (error) {
             console.error('Dashboard initialization failed:', error);
@@ -293,11 +293,9 @@ class Dashboard {
         // Clean up drag and drop listeners
         this.cleanupDragAndDrop();
         
-        // Clean up over budget ticker
-        this.stopOverBudgetTickers();
-        
         // Clean up managers
         this.arrowManager.cleanup();
+        this.tickerManager.cleanup();
     }
     
     /**
@@ -331,67 +329,7 @@ class Dashboard {
         }
     }
     
-    /**
-     * Start ticking timers for over budget items
-     */
-    startOverBudgetTickers() {
-        // Clear any existing ticker
-        this.stopOverBudgetTickers();
-        
-        // Update every second
-        this.overBudgetTickerInterval = setInterval(() => {
-            this.updateOverBudgetTickers();
-        }, 1000);
-    }
-    
-    /**
-     * Stop over budget tickers
-     */
-    stopOverBudgetTickers() {
-        if (this.overBudgetTickerInterval) {
-            clearInterval(this.overBudgetTickerInterval);
-            this.overBudgetTickerInterval = null;
-        }
-    }
-    
-    /**
-     * Update all over budget time displays
-     */
-    updateOverBudgetTickers() {
-        // Handle time budget over budget tickers
-        const overBudgetTimeElements = document.querySelectorAll('.compact-remaining-time[data-over-budget]');
-        
-        overBudgetTimeElements.forEach(element => {
-            const baseOverBudgetHours = parseFloat(element.dataset.overBudget);
-            const startTime = parseInt(element.dataset.startTime);
-            const currentTime = Date.now();
-            
-            // Calculate additional time elapsed since the dashboard was loaded (in hours)
-            const additionalHours = (currentTime - startTime) / (1000 * 60 * 60);
-            const totalOverBudgetHours = baseOverBudgetHours + additionalHours;
-            
-            // Format hours as "XXXh XXm"
-            const h = Math.floor(totalOverBudgetHours);
-            const m = Math.round((totalOverBudgetHours - h) * 60);
-            element.textContent = `${h}h ${m}m`;
-        });
-        
-        // Handle value budget over budget tickers
-        const overBudgetValueElements = document.querySelectorAll('.compact-remaining-value[data-over-budget-value]');
-        
-        overBudgetValueElements.forEach(element => {
-            const baseOverBudgetValue = parseFloat(element.dataset.overBudgetValue);
-            const startTime = parseInt(element.dataset.startTime);
-            const currentTime = Date.now();
-            
-            // Calculate additional value based on elapsed time (assuming some hourly rate)
-            // For now, we'll just tick up slowly as time passes
-            const additionalValue = (currentTime - startTime) / (1000 * 60 * 60) * 0.01; // $0.01 per hour
-            const totalOverBudgetValue = baseOverBudgetValue + additionalValue;
-            
-            element.textContent = `$${totalOverBudgetValue.toFixed(2)} Over Budget`;
-        });
-    }
+
     
     /**
      * Handle drag start event
@@ -1812,7 +1750,7 @@ class Dashboard {
         this.renderCompanyGroupedLayout();
         
         // Restart over budget tickers after render
-        setTimeout(() => this.startOverBudgetTickers(), 200);
+        setTimeout(() => this.tickerManager.start(), 200);
     }
     
     /**
