@@ -1,5 +1,15 @@
 /* Dashboard-specific styles */
 
+/* Wrap progress block and drawer together */
+.progress-block-wrapper {
+    position: relative;
+    margin-bottom: var(--spacing-xs);
+}
+
+.progress-block-wrapper:last-child {
+    margin-bottom: 0;
+}
+
 /* Layout */
 .dashboard-container {
     display: flex;
@@ -244,10 +254,12 @@
     margin-left: var(--spacing-sm);
 }
 
+/* Company progress container needs to handle expanding content */
 .company-progress-container {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
+    position: relative;
 }
 
 /* Company blocks and progress containers are aligned using flexbox gap */
@@ -296,6 +308,7 @@
 }
 
 /* Clean Company Block with Overlay Color Picker */
+/* Company blocks need relative positioning for z-index context */
 .company-block {
     width: 100%;
     background: linear-gradient(135deg, var(--gray-600) 0%, var(--gray-700) 100%);
@@ -310,6 +323,7 @@
     position: relative;
     cursor: pointer;
     overflow: hidden;
+    z-index: 1;
 }
 
 .company-block:hover {
@@ -382,10 +396,12 @@
 }
 
 /* Compact Progress Blocks Container */
+/* Progress blocks container needs relative positioning */
 .progress-blocks-container {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
+    position: relative;
 }
 
 /* Ultra Compact Progress Block */
@@ -400,7 +416,9 @@
     align-items: center;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: var(--shadow-xs);
-    overflow: hidden;
+    overflow: hidden; /* Ensure colored line stays within bounds */
+    cursor: pointer;
+    user-select: none;
 }
 
 .compact-progress-block::before {
@@ -413,6 +431,7 @@
     background: var(--border-color, var(--border-light));
     opacity: 1;
     transition: background-color 0.3s ease;
+    border-radius: var(--radius-md) 0 0 var(--radius-md); /* Added curved corners on left side */
 }
 
 .compact-progress-block:hover {
@@ -1590,4 +1609,315 @@ body.dragging {
     color: var(--text-muted) !important;
     font-style: italic;
     opacity: 0.7;
+}
+
+/* Expanded drawer styles */
+:root {
+    --drawer-bg-success: #f0fdf4;
+    --drawer-bg-warning: #fffbeb;
+    --drawer-bg-danger: #fef2f2;
+    --drawer-border-success: #bbf7d0;
+    --drawer-border-warning: #fde68a;
+    --drawer-border-danger: #fecaca;
+}
+
+/* Already defined above, removed duplicate */
+
+.compact-progress-block.is-expanded {
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    position: relative;
+}
+
+.expanded-drawer {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out, margin-bottom 0.3s ease-out;
+    margin-top: -1px;
+    margin-bottom: 0;
+    position: relative;
+    z-index: 10;
+}
+
+.expanded-drawer.is-open {
+    max-height: 600px;
+    opacity: 1;
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Status-based drawer colors */
+.expanded-drawer.status-success {
+    background: var(--drawer-bg-success);
+    border-color: var(--drawer-border-success);
+}
+
+.expanded-drawer.status-warning {
+    background: var(--drawer-bg-warning);
+    border-color: var(--drawer-border-warning);
+}
+
+.expanded-drawer.status-danger {
+    background: var(--drawer-bg-danger);
+    border-color: var(--drawer-border-danger);
+}
+
+.drawer-content {
+    padding: var(--spacing-sm) var(--spacing-md); /* Reduced vertical, maintain horizontal padding */
+    overflow-y: auto;
+    max-height: 580px;
+}
+
+.drawer-loading,
+.drawer-empty,
+.drawer-error {
+    text-align: center;
+    padding: var(--spacing-lg);
+    color: var(--text-secondary);
+}
+
+.drawer-loading .spinner-small {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: var(--spacing-sm);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.drawer-empty i,
+.drawer-error i {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-sm);
+    display: block;
+    opacity: 0.5;
+}
+
+/* Drawer items - Updated to match compact progress block alignment */
+.drawer-item {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--spacing-md);
+    min-height: 50px; /* Match compact progress block height */
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.drawer-item:not(:last-child) {
+    margin-bottom: var(--spacing-xs);
+}
+
+.drawer-item.indent-1 {
+    margin-left: 20px; /* Reduced to half */
+}
+
+.drawer-item.indent-2 {
+    margin-left: 40px; /* Reduced to half */
+}
+
+/* Match the exact layout of compact progress blocks */
+.drawer-item-content {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: var(--spacing-md);
+}
+
+.drawer-item-left {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+
+.drawer-item-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.drawer-item-icon {
+    font-size: 1.125rem;
+    width: auto;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    margin-left: var(--spacing-md);
+    margin-right: var(--spacing-md);
+}
+
+.drawer-item-title-section {
+    flex: 1;
+    min-width: 0;
+}
+
+.drawer-item-title {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: var(--line-height-tight);
+}
+
+/* Type section - matches compact-block-type-section */
+.drawer-item-type-section {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    width: 160px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.drawer-item-type {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-widest);
+    font-weight: 600;
+    white-space: nowrap;
+    background: var(--background-secondary);
+    padding: 1px 6px;
+    border-radius: var(--radius-xs);
+    align-self: flex-end;
+}
+
+/* Hours section - matches compact-hours-section exactly */
+.drawer-item-hours {
+    display: flex;
+    align-items: center;
+    width: 130px;
+    flex-shrink: 0;
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    gap: var(--spacing-xs);
+}
+
+.drawer-hours-logged {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.drawer-hours-separator {
+    color: var(--text-tertiary);
+    font-weight: 300;
+}
+
+.drawer-hours-total {
+    color: var(--text-secondary);
+}
+
+/* Percentage - matches compact-percentage exactly */
+.drawer-item-percentage {
+    font-size: var(--font-size-base);
+    font-weight: 700;
+    width: 50px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.drawer-item-percentage.status-success {
+    color: var(--success-color);
+}
+
+.drawer-item-percentage.status-warning {
+    color: var(--warning-color);
+}
+
+.drawer-item-percentage.status-danger {
+    color: var(--danger-color);
+}
+
+/* Progress bar - matches compact-progress-bar exactly */
+.drawer-item-progress-bar {
+    width: 240px;
+    height: 8px;
+    background: linear-gradient(135deg, var(--gray-200) 0%, var(--gray-100) 100%);
+    border-radius: var(--radius-xs);
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+
+.drawer-item-progress-fill {
+    height: 100%;
+    border-radius: var(--radius-xs);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.drawer-item-progress-fill.progress-success {
+    background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+}
+
+.drawer-item-progress-fill.progress-warning {
+    background: linear-gradient(135deg, var(--warning-color) 0%, #d97706 100%);
+}
+
+.drawer-item-progress-fill.progress-danger {
+    background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%);
+}
+
+.drawer-item-progress-fill.progress-none {
+    background: var(--gray-200);
+    opacity: 0.5;
+}
+
+/* Remaining section - matches compact-remaining-section exactly */
+.drawer-item-remaining {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    width: 80px;
+    flex-shrink: 0;
+}
+
+.drawer-item-remaining-value {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.drawer-item-remaining-label {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-wide);
+    font-weight: 500;
+}
+
+/* Navbar spinner */
+.navbar-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--primary-color);
+}
+
+/* Animation for smooth height transitions */
+.company-progress-container {
+    transition: height 0.3s ease-out;
 }

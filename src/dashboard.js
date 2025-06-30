@@ -9,6 +9,7 @@ import RenderManager from './managers/render-manager.js';
 import ModalManager from './managers/modal-manager.js';
 import DataManager from './managers/data-manager.js';
 import DragDropManager from './managers/drag-drop-manager.js';
+import ExpandedViewManager from './managers/expanded-view-manager.js';
 
 class Dashboard {
     constructor() {
@@ -20,6 +21,7 @@ class Dashboard {
         // Dashboard management
         this.currentDashboardId = null;
         this.companyColors = {};
+        this.expandedViewData = {}; // Cache for expanded view data
         
         // Modal state for two-step flow
         this.modalStep = 1; // 1 = select companies, 2 = select projects/agreements
@@ -38,6 +40,7 @@ class Dashboard {
         this.modalManager = new ModalManager(this);
         this.dataManager = new DataManager(this);
         this.dragDropManager = new DragDropManager(this);
+        this.expandedViewManager = new ExpandedViewManager(this);
     }
     
     /**
@@ -70,6 +73,7 @@ class Dashboard {
             this.modalManager.init();
             this.dataManager.init();
             this.dragDropManager.init();
+            this.expandedViewManager.init();
             
             // Render dashboard
             this.renderManager.renderDashboard();
@@ -157,6 +161,7 @@ class Dashboard {
         this.arrowManager.cleanup();
         this.tickerManager.cleanup();
         this.dragDropManager.cleanup();
+        this.expandedViewManager.cleanup();
     }
     
 

@@ -52,6 +52,18 @@ A modern project management dashboard application that integrates with Accelo to
 - **Search & Add**: Easily search and add companies, projects, and agreements to your dashboard
 - **Full-Width Layout**: Progress blocks stretch across available width for optimal space utilization
 
+### Expanded View (NEW!)
+- **Click to Expand**: Click any project block to see detailed tasks and milestones
+- **Smooth Animation**: Drawer slides down below the progress block with status-based coloring
+- **Comprehensive Details**: View all tasks and milestones with:
+  - Individual progress bars and percentages
+  - Time tracking (hours worked vs budget)
+  - Hierarchical display (milestones with sub-tasks)
+  - Color-coded status indicators
+- **Performance Optimized**: Background preloading of project details for instant access
+- **Smart Interaction**: Click detection distinguishes between clicks and drag operations
+- **One at a Time**: Only one expanded view open at once, click outside to close
+
 ### Security & Performance
 - **Secure Authentication**: Service Application OAuth 2.0 with 30-day tokens
 - **Real-time Updates**: Automatic data refresh with caching
@@ -1099,6 +1111,31 @@ Check terminal for:
 3. **Fixed Metrics**: Cannot customize displayed data
 
 ## Recent Updates
+
+### Expanded View Feature (v3.1)
+
+**New Capability**:
+- **Interactive Progress Blocks**: Click any project to expand and see detailed task/milestone breakdown
+- **Hierarchical Task Display**: Shows project structure with milestones and their sub-tasks
+- **Real-time Progress**: Each task/milestone shows its own progress bar and time tracking
+- **Performance Optimized**: Background preloading ensures instant response when clicking
+- **Smart Click Detection**: Distinguishes between click (expand) and drag (reorder) operations
+
+**Technical Implementation**:
+- **ExpandedViewManager**: Dedicated manager handles all expanded view functionality
+- **API Integration**: Uses `getProjectTasksAndMilestones()` for comprehensive project details
+- **CSS Animations**: Smooth drawer transitions with status-based theming
+- **Event Coordination**: Click handling that doesn't interfere with drag & drop
+- **Data Caching**: Preloaded data stored in memory for instant access
+
+**User Experience**:
+- Single click to expand any project block
+- Smooth slide-down animation reveals task details
+- Click outside or same block to close
+- Loading states for data fetching
+- Error handling with user-friendly messages
+
+For detailed documentation, see **[docs/EXPANDED_VIEW_FEATURE.md](docs/EXPANDED_VIEW_FEATURE.md)**.
 
 ### Dashboard Refactoring Completion (v3.0)
 

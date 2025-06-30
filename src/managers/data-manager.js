@@ -110,6 +110,9 @@ export default class DataManager {
         this.dashboard.companyOrder = dashboardData.companyOrder || [];
         this.dashboard.companyColors = dashboardData.companyColors || {};
         
+        // Load expanded view data for the expanded view manager
+        this.dashboard.expandedViewData = dashboardData.expandedViewData || {};
+        
         // If no company order saved, derive it from dashboardData
         if (this.dashboard.companyOrder.length === 0 && this.dashboard.dashboardData.length > 0) {
             const companies = this.dashboard.groupItemsByCompany();
@@ -130,10 +133,55 @@ export default class DataManager {
         const state = {
             dashboardData: this.dashboard.dashboardData,
             companyOrder: this.dashboard.companyOrder,
-            companyColors: this.dashboard.companyColors
+            companyColors: this.dashboard.companyColors,
+            expandedViewData: this.dashboard.expandedViewData || {}
         };
         
         window.dashboardManager.saveDashboardData(this.dashboard.currentDashboardId, state);
+    }
+    
+    /**
+     * Load expanded view data for a specific item
+     * @param {string} itemId - The item ID (e.g., "project_123")
+     * @returns {object|null} - The cached expanded view data or null if not found
+     */
+    loadExpandedViewData(itemId) {
+        return this.dashboard.expandedViewData?.[itemId] || null;
+    }
+    
+    /**
+     * Save expanded view data for a specific item
+     * @param {string} itemId - The item ID (e.g., "project_123")
+     * @param {object} data - The expanded view data to cache
+     */
+    saveExpandedViewData(itemId, data) {
+        if (!this.dashboard.expandedViewData) {
+            this.dashboard.expandedViewData = {};
+        }
+        
+        this.dashboard.expandedViewData[itemId] = {
+            ...data,
+            cachedAt: new Date().toISOString()
+        };
+        
+        // Save to localStorage immediately
+        this.saveDashboardState();
+    }
+    
+    /**
+     * Get all expanded view data
+     * @returns {object} - All cached expanded view data
+     */
+    getAllExpandedViewData() {
+        return this.dashboard.expandedViewData || {};
+    }
+    
+    /**
+     * Clear all expanded view data
+     */
+    clearExpandedViewData() {
+        this.dashboard.expandedViewData = {};
+        this.saveDashboardState();
     }
     
     /**
@@ -150,6 +198,14 @@ export default class DataManager {
 
         try {
             UIComponents.showLoading();
+            
+            // Clear expanded view cache since we're refreshing all data
+            this.clearExpandedViewData();
+            
+            // Clear the in-memory expanded view cache as well
+            if (this.dashboard.expandedViewManager) {
+                this.dashboard.expandedViewManager.expandedData.clear();
+            }
             
             // Refresh data for each item
             for (let i = 0; i < this.dashboard.dashboardData.length; i++) {

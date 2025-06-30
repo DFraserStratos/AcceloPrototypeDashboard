@@ -312,6 +312,13 @@ export default class RenderManager {
      * @returns {HTMLElement} The created progress block element
      */
     createCompactProgressBlock(item) {
+        // Track click state to distinguish from drag
+        let isClick = false;
+        let mouseDownTime = 0;
+        let mouseDownX = 0;
+        let mouseDownY = 0;
+        const CLICK_TIME_THRESHOLD = 200; // ms
+        const CLICK_DISTANCE_THRESHOLD = 5; // pixels
         // Determine type and icon - improved logic
         let isProject = false;
         let type = 'agreement'; // default to agreement
@@ -614,6 +621,57 @@ export default class RenderManager {
                 <span class="icon-remove">✕</span>
             </button>
         `;
+        
+        // Add click handling that doesn't interfere with drag
+        block.addEventListener('mousedown', (e) => {
+            // Don't interfere with remove button clicks
+            if (e.target.closest('.compact-remove-btn')) return;
+            
+            isClick = true;
+            mouseDownTime = Date.now();
+            mouseDownX = e.clientX;
+            mouseDownY = e.clientY;
+        });
+        
+        block.addEventListener('mousemove', (e) => {
+            if (!isClick) return;
+            
+            const deltaX = Math.abs(e.clientX - mouseDownX);
+            const deltaY = Math.abs(e.clientY - mouseDownY);
+            
+            // If moved too far, it's a drag not a click
+            if (deltaX > CLICK_DISTANCE_THRESHOLD || deltaY > CLICK_DISTANCE_THRESHOLD) {
+                isClick = false;
+            }
+        });
+        
+        block.addEventListener('mouseup', (e) => {
+            if (!isClick) return;
+            
+            const clickDuration = Date.now() - mouseDownTime;
+            const deltaX = Math.abs(e.clientX - mouseDownX);
+            const deltaY = Math.abs(e.clientY - mouseDownY);
+            
+            // Check if it's a valid click (short duration and minimal movement)
+            if (clickDuration < CLICK_TIME_THRESHOLD && 
+                deltaX <= CLICK_DISTANCE_THRESHOLD && 
+                deltaY <= CLICK_DISTANCE_THRESHOLD) {
+                // Don't trigger on remove button or links
+                if (!e.target.closest('.compact-remove-btn') && 
+                    !e.target.closest('.compact-block-title-link')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.dashboard.expandedViewManager.handleProgressBlockClick(block, item);
+                }
+            }
+            
+            isClick = false;
+        });
+        
+        // Handle mouse leave to reset state
+        block.addEventListener('mouseleave', () => {
+            isClick = false;
+        });
         
         return block;
     }

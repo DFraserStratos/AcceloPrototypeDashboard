@@ -188,6 +188,173 @@ class AcceloAPI {
     }
 
     /**
+     * Get detailed tasks and milestones for a project with progress information
+     */
+    async getProjectTasksAndMilestones(projectId) {
+        try {
+            console.log(`Getting tasks and milestones for project ${projectId}...`);
+            
+            // Get tasks for this project
+            const tasksParams = new URLSearchParams({
+                _fields: 'id,title,status,date_started,date_due,date_completed,against,assignee,standing,billable,nonbillable,logged,budgeted',
+                _filters: `against_type(job),against_id(${projectId})`,
+                _limit: 200,
+                _order_by: 'date_created'
+            });
+
+            // Get milestones for this project
+            const milestonesParams = new URLSearchParams({
+                _fields: 'id,title,status,date_started,date_due,date_completed,standing',
+                _limit: 100,
+                _order_by: 'date_created'
+            });
+
+            const [tasksResponse, milestonesResponse] = await Promise.all([
+                this.request(`/tasks?${tasksParams}`).catch(() => ({ response: [] })),
+                this.request(`/jobs/${projectId}/milestones?${milestonesParams}`).catch(() => ({ response: [] }))
+            ]);
+
+            const tasks = tasksResponse?.response || [];
+            const milestones = milestonesResponse?.response || [];
+            
+            // Get detailed data for each task
+            const tasksWithTime = [];
+            for (const task of tasks) {
+                try {
+                    // Use the task fields directly (much more reliable than separate API calls)
+                    const taskBillable = parseFloat(task.billable || 0);
+                    const taskNonBillable = parseFloat(task.nonbillable || 0);
+                    const taskLogged = parseFloat(task.logged || 0);
+                    const taskBudgeted = parseFloat(task.budgeted || 0);
+                    
+                    // Use logged if available, otherwise sum billable + nonbillable
+                    const totalSeconds = taskLogged || (taskBillable + taskNonBillable);
+                    
+                    tasksWithTime.push({
+                        ...task,
+                        type: 'task',
+                        hours: {
+                            billableHours: Math.round(taskBillable / 3600 * 10) / 10,
+                            nonBillableHours: Math.round(taskNonBillable / 3600 * 10) / 10,
+                            totalHours: Math.round(totalSeconds / 3600 * 10) / 10,
+                            budgetHours: Math.round(taskBudgeted / 3600 * 10) / 10
+                        }
+                    });
+                    
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                } catch (error) {
+                    console.warn(`Failed to get details for task ${task.id}:`, error.message);
+                    tasksWithTime.push({
+                        ...task,
+                        type: 'task',
+                        hours: { billableHours: 0, nonBillableHours: 0, totalHours: 0, budgetHours: 0 }
+                    });
+                }
+            }
+            
+            // Process milestones and their sub-tasks
+            const milestonesWithDetails = [];
+            for (const milestone of milestones) {
+                try {
+                    // Get tasks under this milestone
+                    const milestoneTasksParams = new URLSearchParams({
+                        _fields: 'id,title,status,date_started,date_due,standing,billable,nonbillable,logged,budgeted',
+                        _filters: `against_type(milestone),against_id(${milestone.id})`,
+                        _limit: 100
+                    });
+
+                    const milestoneTasksResponse = await this.request(`/tasks?${milestoneTasksParams}`).catch(() => ({ response: [] }));
+                    const milestoneTasks = milestoneTasksResponse?.response || [];
+                    
+                    // Get detailed data for milestone tasks and calculate milestone totals
+                    const milestoneTasksWithTime = [];
+                    let totalMilestoneBillable = 0;
+                    let totalMilestoneNonBillable = 0;
+                    let totalMilestoneLogged = 0;
+                    let totalMilestoneBudgeted = 0;
+                    
+                    for (const mTask of milestoneTasks) {
+                        try {
+                            // Use task fields directly
+                            const mTaskBillable = parseFloat(mTask.billable || 0);
+                            const mTaskNonBillable = parseFloat(mTask.nonbillable || 0);
+                            const mTaskLogged = parseFloat(mTask.logged || 0);
+                            const mTaskBudgeted = parseFloat(mTask.budgeted || 0);
+                            
+                            const mTaskTotalSeconds = mTaskLogged || (mTaskBillable + mTaskNonBillable);
+                            
+                            // Add to milestone totals
+                            totalMilestoneBillable += mTaskBillable;
+                            totalMilestoneNonBillable += mTaskNonBillable;
+                            totalMilestoneLogged += mTaskTotalSeconds;
+                            totalMilestoneBudgeted += mTaskBudgeted;
+                            
+                            milestoneTasksWithTime.push({
+                                ...mTask,
+                                type: 'task',
+                                parentMilestoneId: milestone.id,
+                                hours: {
+                                    billableHours: Math.round(mTaskBillable / 3600 * 10) / 10,
+                                    nonBillableHours: Math.round(mTaskNonBillable / 3600 * 10) / 10,
+                                    totalHours: Math.round(mTaskTotalSeconds / 3600 * 10) / 10,
+                                    budgetHours: Math.round(mTaskBudgeted / 3600 * 10) / 10
+                                }
+                            });
+                            
+                        } catch (error) {
+                            console.warn(`Failed to get details for milestone task ${mTask.id}:`, error.message);
+                            milestoneTasksWithTime.push({
+                                ...mTask,
+                                type: 'task',
+                                parentMilestoneId: milestone.id,
+                                hours: { billableHours: 0, nonBillableHours: 0, totalHours: 0, budgetHours: 0 }
+                            });
+                        }
+                        
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                    
+                    // Milestone hours are the sum of all its sub-tasks
+                    milestonesWithDetails.push({
+                        ...milestone,
+                        type: 'milestone',
+                        hours: {
+                            billableHours: Math.round(totalMilestoneBillable / 3600 * 10) / 10,
+                            nonBillableHours: Math.round(totalMilestoneNonBillable / 3600 * 10) / 10,
+                            totalHours: Math.round(totalMilestoneLogged / 3600 * 10) / 10,
+                            budgetHours: Math.round(totalMilestoneBudgeted / 3600 * 10) / 10
+                        },
+                        tasks: milestoneTasksWithTime
+                    });
+                    
+                } catch (error) {
+                    console.warn(`Failed to get details for milestone ${milestone.id}:`, error.message);
+                    milestonesWithDetails.push({
+                        ...milestone,
+                        type: 'milestone',
+                        hours: { billableHours: 0, nonBillableHours: 0, totalHours: 0, budgetHours: 0 },
+                        tasks: []
+                    });
+                }
+            }
+            
+            console.log(`Successfully loaded ${tasksWithTime.length} tasks and ${milestonesWithDetails.length} milestones for project ${projectId}`);
+            
+            return {
+                tasks: tasksWithTime,
+                milestones: milestonesWithDetails
+            };
+            
+        } catch (error) {
+            console.error(`Failed to get tasks and milestones for project ${projectId}:`, error);
+            return {
+                tasks: [],
+                milestones: []
+            };
+        }
+    }
+
+    /**
      * Get activity allocations (hours) for a project including all tasks and milestones
      */
     async getProjectHours(projectId) {
